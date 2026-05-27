@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Bundle demo data
+        run: node scripts/bundle-demo-data.js
+
       - name: Build frontend
         run: npm run build
 

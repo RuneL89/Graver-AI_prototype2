@@ -1,0 +1,28 @@
+{
+  "kbName": "kb-sanctions",
+  "pages": [
+    {
+      "title": "Global Shipping Partners",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Global Shipping Partners\n\n## Summary\n\nCorporate entity sanctioned on 2025-09-02 for trade restrictions violation.\n\n## Connections\n\nNone.\n\n## Sources\n\n- [[sanctions_list_march_2026]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Jens Hansen",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\naliases: \"J. Hansen\"\n---\n\n# Jens Hansen\n\n## Summary\n\nIndividual sanctioned on 2025-11-14 for alleged involvement in procurement fraud and money laundering. Alias J. Hansen.\n\n## Connections\n\n- NorthStar Procurement Inc — Related entity\n- [[Procurement Fraud]] — Sanction reason\n\n## Sources\n\n- [[sanctions_list_march_2026]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Procurement Fraud",
+      "type": "concept",
+      "content": "---\ntype: \"concept\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Procurement Fraud\n\nManipulation of public procurement processes for personal or corporate gain. Includes bid-rigging, kickbacks, and false invoicing."
+    },
+    {
+      "title": "sanctions_list_march_2026",
+      "type": "source",
+      "content": "---\ntype: \"source\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Source: sanctions_list_march_2026.pdf\n\nFormat: pdf\n\n## Extracted Text\n\nSanctions List - March 2026\nEntity: Jens Hansen (alias J. Hansen)\nType: Individual\nSanction Date: 2025-11-14\nReason: Alleged involvement in procurement fraud and money laundering.\nRelated Entities: NorthStar Procurement Inc, offshore shell companies.\nEntity: Global Shipping Partners\nType: Corporate\nSanction Date: 2025-09-02\nReason: Trade restrictions violation.\n"
+    }
+  ],
+  "indexText": "# kb-sanctions Index\n\nContent catalog for the kb-sanctions knowledge base.\n\n## Entities\n\n- [[Jens Hansen]] — Sanctioned individual for procurement fraud\n- [[Global Shipping Partners]] — Sanctioned corporate entity\n\n## Concepts\n\n- [[Procurement Fraud]] — Domain concept for procurement manipulation\n\n## Sources\n\n- [[sanctions_list_march_2026]] — Sanctions list PDF\n\n## Synthesis\n\n\n",
+  "logText": "- 2026-05-27T19:18:35.956Z — Ingested sanctions_list_march_2026.pdf (pdf, 364 chars)\n- 2026-05-27T19:20:08.730Z — Demo wiki setup complete\n- 2026-05-27T19:20:13.398Z — Lint complete: 6 issues\n- 2026-05-27T19:20:33.050Z — Lint complete: 1 issues\n- 2026-05-27T19:20:57.805Z — Lint complete: 1 issues\n- 2026-05-27T19:21:30.795Z — Demo wiki setup complete\n- 2026-05-27T19:21:34.557Z — Lint complete: 0 issues\n",
+  "schemaText": "# Schema: kb-sanctions\n\n## Page Types\n\n| Type | Directory | Description |\n|------|-----------|-------------|\n| entity | `/wiki/entities/` | Sanctioned individuals and entities |\n| concept | `/wiki/concepts/` | Sanction types, legal frameworks |\n| source | `/wiki/sources/` | Summaries of sanctions lists |\n| synthesis | `/wiki/synthesis/` | Cross-list analysis |\n\n## Ingest Rules\n\n- **PDF:** Parse with `pdf-parse`; extract sanctioned entity blocks.\n- **Structured:** Map fields like name, type, date, reason.\n\n## Query Behavior\n\n1. Read `index.md` for sanctioned names.\n2. Read entity pages for aliases and related entities.\n3. Cite exact reason and date from source.\n\n## Citation Format\n\n```\n[[Entity Name]](source:raw/sanctions_list_march_2026.pdf)\n```\n\n## Verification Thresholds\n\n- **Explicit:** Name and sanction reason appear in official list.\n- **Inference:** Alias match without explicit sanction reference — flag.\n- **Out of context:** Old sanction date presented as current — flag.\n"
+}

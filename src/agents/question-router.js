@@ -1,7 +1,7 @@
 import { LLMClient } from '../shared/llm-client.js';
-import fs from 'fs/promises';
-import path from 'path';
+import { readWikiIndex } from '../lib/wikiStore.js';
 import { runSwarm } from './swarm-orchestrator.js';
+import { buildGraph } from './connection-agent.js';
 
 export async function routeQuestion(question, sessionContext, config) {
   const client = new LLMClient(config);
@@ -10,13 +10,15 @@ export async function routeQuestion(question, sessionContext, config) {
   const activeBases = sessionContext?.activeBases || [];
   const indexes = [];
   for (const kb of activeBases) {
-    const indexPath = path.resolve('data', kb, 'wiki', 'index.md');
-    try {
-      const content = await fs.readFile(indexPath, 'utf-8');
-      indexes.push({ kb, content });
-    } catch {
-      // skip
+    const sections = await readWikiIndex(kb);
+    let content = '';
+    for (const [section, items] of Object.entries(sections)) {
+      content += `## ${section}\n`;
+      for (const item of items) {
+        content += `- ${item.title}${item.summary ? ` — ${item.summary}` : ''}\n`;
+      }
     }
+    indexes.push({ kb, content });
   }
 
   let targetBases = activeBases;
@@ -37,7 +39,6 @@ export async function routeQuestion(question, sessionContext, config) {
 
   const activated = targetBases.map((kb) => ({ kbName: kb, activated: true }));
   const bundles = await runSwarm(question, activated, config);
-  const { buildGraph } = await import('./connection-agent.js');
   const graph = await buildGraph(bundles, config);
 
   return {

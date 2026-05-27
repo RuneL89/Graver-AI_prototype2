@@ -1,6 +1,5 @@
 import { LLMClient } from '../shared/llm-client.js';
-import fs from 'fs/promises';
-import path from 'path';
+import { readWikiIndex } from '../lib/wikiStore.js';
 
 export async function relevanceScore(tip, kbList, config) {
   const client = new LLMClient(config);
@@ -10,12 +9,13 @@ export async function relevanceScore(tip, kbList, config) {
   const tipWords = tip.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
 
   for (const kb of kbList) {
-    const indexPath = path.resolve('data', kb, 'wiki', 'index.md');
+    const indexSections = await readWikiIndex(kb);
     let indexContent = '';
-    try {
-      indexContent = await fs.readFile(indexPath, 'utf-8');
-    } catch {
-      indexContent = '';
+    for (const [section, items] of Object.entries(indexSections)) {
+      indexContent += `## ${section}\n`;
+      for (const item of items) {
+        indexContent += `- ${item.title}${item.summary ? ` — ${item.summary}` : ''}\n`;
+      }
     }
 
     let result;
@@ -29,7 +29,6 @@ export async function relevanceScore(tip, kbList, config) {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       result = jsonMatch ? JSON.parse(jsonMatch[0]) : { score: 0.5, justification: 'Fallback' };
     } catch {
-      // Fallback heuristic: keyword overlap
       const contentWords = indexContent.toLowerCase().split(/\W+/);
       const matches = tipWords.filter((w) => contentWords.includes(w)).length;
       const score = Math.min(0.3 + matches * 0.15, 0.95);

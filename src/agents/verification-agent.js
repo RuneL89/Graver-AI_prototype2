@@ -1,6 +1,5 @@
 import { LLMClient } from '../shared/llm-client.js';
-import fs from 'fs/promises';
-import path from 'path';
+import { listRawSources, readRawSourceText } from '../lib/rawVault.js';
 
 export async function verifyBlock(paragraph, citations, config) {
   const client = new LLMClient(config);
@@ -9,20 +8,13 @@ export async function verifyBlock(paragraph, citations, config) {
   let rawSources = '';
   for (const c of citations) {
     const kb = c.source;
-    const rawDir = path.resolve('data', kb, 'raw');
-    try {
-      const files = await fs.readdir(rawDir);
-      for (const f of files) {
-        const content = await fs.readFile(path.join(rawDir, f), 'utf-8');
-        rawSources += `\n--- ${kb}/${f} ---\n${content}\n`;
-      }
-    } catch {
-      // skip missing raw dir
+    const files = await listRawSources(kb);
+    for (const f of files) {
+      const content = await readRawSourceText(kb, f);
+      rawSources += `\n--- ${kb}/${f} ---\n${content}\n`;
     }
   }
 
-  // Heuristic verification: check if cited text appears in raw sources
-  const paragraphLower = paragraph.toLowerCase();
   let allExplicit = true;
   let reason = null;
 

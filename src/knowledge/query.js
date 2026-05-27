@@ -1,12 +1,7 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { parseIndex, WikiPage } from './wiki-page.js';
+import { readWikiIndex, loadWikiPage } from '../lib/wikiStore.js';
 
 export async function queryWiki(kbName, question) {
-  const indexPath = path.resolve('data', kbName, 'wiki', 'index.md');
-  const indexText = await fs.readFile(indexPath, 'utf-8').catch(() => '');
-  const index = parseIndex(indexText);
-
+  const index = await readWikiIndex(kbName);
   const relevantPages = [];
   const q = question.toLowerCase();
 
@@ -21,12 +16,9 @@ export async function queryWiki(kbName, question) {
   const contents = [];
   for (const page of relevantPages) {
     const sectionDir = sectionToDir(page.section);
-    const pagePath = path.resolve('data', kbName, 'wiki', sectionDir, `${page.title}.md`);
-    try {
-      const text = await fs.readFile(pagePath, 'utf-8');
-      contents.push({ title: page.title, text });
-    } catch {
-      // skip missing
+    const pageData = await loadWikiPage(kbName, sectionDir, page.title);
+    if (pageData) {
+      contents.push({ title: page.title, text: pageData.content || '' });
     }
   }
 
@@ -44,9 +36,9 @@ export async function queryWiki(kbName, question) {
 
 function sectionToDir(section) {
   const map = {
-    entities: 'entities',
-    concepts: 'concepts',
-    sources: 'sources',
+    entities: 'entity',
+    concepts: 'concept',
+    sources: 'source',
     synthesis: 'synthesis',
   };
   return map[section] || section;

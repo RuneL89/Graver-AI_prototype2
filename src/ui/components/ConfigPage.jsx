@@ -1,54 +1,34 @@
 import React, { useState } from 'react';
 
+function validateHttpsUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export default function ConfigPage({ config, onSave, onBack }) {
   const [url, setUrl] = useState(config.apiBaseUrl || '');
   const [model, setModel] = useState(config.modelName || '');
+  const [apiKey, setApiKey] = useState(config.apiKey || '');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function handleSave(e) {
+  function handleSave(e) {
     e.preventDefault();
     setError('');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiBaseUrl: url, modelName: model }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.confirmRequired) {
-          const ok = window.confirm('Agents are running. Changing config will reset sessions. Continue?');
-          if (ok) {
-            // Re-send with force
-            const forceRes = await fetch('/api/config', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ apiBaseUrl: url, modelName: model, force: true }),
-            });
-            if (!forceRes.ok) {
-              const forceData = await forceRes.json();
-              setError(forceData.error || 'Unknown error');
-              setLoading(false);
-              return;
-            }
-          } else {
-            setLoading(false);
-            return;
-          }
-        } else {
-          setError(data.error || 'Unknown error');
-          setLoading(false);
-          return;
-        }
-      }
-      onSave({ apiBaseUrl: url, modelName: model });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (!url || !validateHttpsUrl(url)) {
+      setError('Invalid HTTPS URL for API Base URL');
+      return;
     }
+    if (!model) {
+      setError('Model name is required');
+      return;
+    }
+    const cfg = { apiBaseUrl: url, modelName: model, apiKey };
+    localStorage.setItem('llm-config', JSON.stringify(cfg));
+    onSave(cfg);
   }
 
   return (
@@ -77,9 +57,19 @@ export default function ConfigPage({ config, onSave, onBack }) {
             required
           />
         </div>
+        <div style={{ marginBottom: 16 }}>
+          <label>API Key (stored in browser)</label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="sk-..."
+            style={{ width: '100%', padding: 8, marginTop: 4 }}
+          />
+        </div>
         {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
-        <button type="submit" disabled={loading} style={{ padding: '8px 16px' }}>
-          {loading ? 'Saving…' : 'Save & Reset Sessions'}
+        <button type="submit" style={{ padding: '8px 16px' }}>
+          Save
         </button>
         <button type="button" onClick={onBack} style={{ padding: '8px 16px', marginLeft: 8 }}>
           Cancel

@@ -1,6 +1,5 @@
 import { LLMClient } from '../shared/llm-client.js';
-import fs from 'fs/promises';
-import path from 'path';
+import { readWikiIndex, listWikiPages, loadWikiPage } from '../lib/wikiStore.js';
 
 export async function runSwarm(tip, activatedBases, config) {
   const promises = activatedBases.map((base) =>
@@ -16,44 +15,37 @@ async function researchAgent(tip, kbName, config) {
 
   const tipWords = tip.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
 
-  const indexPath = path.resolve('data', kbName, 'wiki', 'index.md');
+  const indexSections = await readWikiIndex(kbName);
   let indexContent = '';
-  try {
-    indexContent = await fs.readFile(indexPath, 'utf-8');
-  } catch {
-    indexContent = '';
+  for (const [section, items] of Object.entries(indexSections)) {
+    indexContent += `## ${section}\n`;
+    for (const item of items) {
+      indexContent += `- ${item.title}${item.summary ? ` — ${item.summary}` : ''}\n`;
+    }
   }
 
-  // Read entity pages
-  const entityDir = path.resolve('data', kbName, 'wiki', 'entities');
-  let entityFiles = [];
-  try {
-    entityFiles = await fs.readdir(entityDir);
-  } catch {
-    entityFiles = [];
-  }
-
+  const entityNames = await listWikiPages(kbName, 'entity');
   const passages = [];
   const entities = [];
 
-  for (const file of entityFiles.filter((f) => f.endsWith('.md'))) {
-    const content = await fs.readFile(path.join(entityDir, file), 'utf-8');
-    const name = file.replace('.md', '');
+  for (const name of entityNames) {
+    const page = await loadWikiPage(kbName, 'entity', name);
+    if (!page) continue;
+    const content = page.content || '';
     const contentLower = content.toLowerCase();
     const matches = tipWords.filter((w) => contentLower.includes(w)).length;
 
-    entities.push({ name, type: inferType(name), wikiPage: `entities/${file}` });
+    entities.push({ name, type: inferType(name), wikiPage: `entities/${name}.md` });
 
     if (matches > 0) {
       passages.push({
         text: content.slice(0, 1000),
-        sourcePage: `entities/${file}`,
+        sourcePage: `entities/${name}.md`,
         entityRefs: [name],
       });
     }
   }
 
-  // Try LLM synthesis
   try {
     const prompt = `Tip: "${tip}"\n\nKnowledge Base: ${kbName}\nIndex:\n${indexContent}\n\nEntity pages:\n${passages.map((p) => p.text.slice(0, 300)).join('\n---\n')}\n\nReturn a JSON object:\n{\n  "relevantPassages": ["..."],\n  "relevantEntities": ["..."]\n}`;
     const raw = await client.sendMessage(

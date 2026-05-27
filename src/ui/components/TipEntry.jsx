@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../store.jsx';
+import { relevanceScore } from '../../agents/relevance-scorer.js';
+import { runSwarm } from '../../agents/swarm-orchestrator.js';
+import { buildGraph } from '../../agents/connection-agent.js';
+import { listKnowledgeBases } from '../../lib/wikiStore.js';
 
 export default function TipEntry() {
   const { state, dispatch } = useStore();
@@ -14,18 +18,14 @@ export default function TipEntry() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/investigate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tip: text }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        dispatch({ type: 'SET_ACTIVATED_BASES', payload: data.scores || [] });
-        dispatch({ type: 'SET_GRAPH', payload: data.graph || { nodes: [], edges: [] } });
-      } else {
-        alert(data.error || 'Investigation failed');
-      }
+      const kbList = await listKnowledgeBases();
+      const scores = await relevanceScore(text, kbList, state.config);
+      const activated = scores.filter((s) => s.activated);
+      const bundles = await runSwarm(text, activated, state.config);
+      const graph = await buildGraph(bundles, state.config);
+      graph.bundles = bundles;
+      dispatch({ type: 'SET_ACTIVATED_BASES', payload: scores });
+      dispatch({ type: 'SET_GRAPH', payload: graph });
     } catch (err) {
       alert(err.message);
     } finally {

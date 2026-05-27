@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useStore } from '../store.jsx';
 import cytoscape from 'cytoscape';
+import { draftParagraph } from '../../agents/writing-agent.js';
 
 export default function ConnectionGraph() {
   const { state, dispatch } = useStore();
@@ -30,15 +31,8 @@ export default function ConnectionGraph() {
       dispatch({ type: 'SET_SELECTED_CONNECTION', payload: connectionId });
       setWriting(true);
       try {
-        const res = await fetch('/api/write', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ connectionId, bundles: state.graph.bundles || [] }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          dispatch({ type: 'SET_PENDING_BLOCK', payload: data });
-        }
+        const data = await draftParagraph(connectionId, state.graph.bundles || [], state.config);
+        dispatch({ type: 'SET_PENDING_BLOCK', payload: data });
       } catch (err) {
         alert(err.message);
       } finally {
@@ -47,7 +41,7 @@ export default function ConnectionGraph() {
     });
 
     return () => cy.destroy();
-  }, [dispatch]);
+  }, [dispatch, state.config]);
 
   useEffect(() => {
     if (!cyRef.current) return;

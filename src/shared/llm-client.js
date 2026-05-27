@@ -1,12 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs/promises';
-import path from 'path';
-
-const DEBUG_LOG_PATH = path.resolve('logs', 'llm-debug.log');
+const DEBUG_LOG = [];
 
 export class LLMClient {
   constructor({ baseUrl, apiBaseUrl, modelName, apiKey = 'dummy-key' }) {
-    this.instanceId = uuidv4();
+    this.instanceId = crypto.randomUUID();
     const url = baseUrl || apiBaseUrl || '';
     this.baseUrl = url.replace(/\/$/, '');
     this.modelName = modelName;
@@ -15,7 +11,7 @@ export class LLMClient {
   }
 
   async sendMessage(systemPrompt, userMessage, temperature = 0.2) {
-    const requestId = uuidv4();
+    const requestId = crypto.randomUUID();
     const payload = {
       model: this.modelName,
       messages: [
@@ -33,7 +29,8 @@ export class LLMClient {
       type: 'REQUEST',
       payload,
     };
-    await this._appendDebugLog(requestLog);
+    DEBUG_LOG.push(requestLog);
+    console.log(`[LLMClient ${this.instanceId}] REQUEST`, requestId);
 
     let responseText;
     try {
@@ -64,7 +61,8 @@ export class LLMClient {
         type: 'RESPONSE',
         payload: data,
       };
-      await this._appendDebugLog(responseLog);
+      DEBUG_LOG.push(responseLog);
+      console.log(`[LLMClient ${this.instanceId}] RESPONSE`, requestId);
 
       this.conversationHistory.push(
         { role: 'user', content: userMessage },
@@ -78,19 +76,15 @@ export class LLMClient {
         type: 'ERROR',
         error: err.message,
       };
-      await this._appendDebugLog(errorLog);
+      DEBUG_LOG.push(errorLog);
+      console.error(`[LLMClient ${this.instanceId}] ERROR`, requestId, err.message);
       throw err;
     }
 
     return responseText;
   }
+}
 
-  async _appendDebugLog(entry) {
-    try {
-      await fs.mkdir(path.dirname(DEBUG_LOG_PATH), { recursive: true });
-      await fs.appendFile(DEBUG_LOG_PATH, JSON.stringify(entry) + '\n');
-    } catch {
-      // Silent fail for debug logging
-    }
-  }
+export function getDebugLog() {
+  return DEBUG_LOG;
 }

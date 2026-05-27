@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../store.jsx';
+import { relevanceScore } from '../../agents/relevance-scorer.js';
+import { runSwarm } from '../../agents/swarm-orchestrator.js';
+import { buildGraph } from '../../agents/connection-agent.js';
+import { listKnowledgeBases } from '../../lib/wikiStore.js';
 
 export default function ActiveKbPanel() {
   const { state, dispatch } = useStore();
@@ -16,18 +20,15 @@ export default function ActiveKbPanel() {
   async function rerun() {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const activated = state.activatedBases.filter((b) => b.activated);
-      const res = await fetch('/api/investigate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tip: state.tip }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        dispatch({ type: 'SET_ACTIVATED_BASES', payload: data.scores || [] });
-        dispatch({ type: 'SET_GRAPH', payload: data.graph || { nodes: [], edges: [] } });
-        setModified(false);
-      }
+      const kbList = await listKnowledgeBases();
+      const scores = await relevanceScore(state.tip, kbList, state.config);
+      const activated = scores.filter((s) => s.activated);
+      const bundles = await runSwarm(state.tip, activated, state.config);
+      const graph = await buildGraph(bundles, state.config);
+      graph.bundles = bundles;
+      dispatch({ type: 'SET_ACTIVATED_BASES', payload: scores });
+      dispatch({ type: 'SET_GRAPH', payload: graph });
+      setModified(false);
     } catch (err) {
       alert(err.message);
     } finally {

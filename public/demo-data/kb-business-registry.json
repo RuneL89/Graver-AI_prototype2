@@ -1,0 +1,43 @@
+{
+  "kbName": "kb-business-registry",
+  "pages": [
+    {
+      "title": "Jens Hansen",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 3\nstatus: \"active\"\naliases: \"J. Hansen, Director Y\"\n---\n\n# Jens Hansen\n\n## Summary\n\nDirector of both Oceanic Logistics Ltd and NorthStar Procurement Inc. Also known as J. Hansen. Subject of sanctions.\n\n## Connections\n\n- [[Oceanic Logistics Ltd]] — Director\n- [[NorthStar Procurement Inc]] — Director\n- Government IT Services — Signatory\n\n## Sources\n\n- [[business_registry_q1_2026]]\n- sanctions_list_march_2026 (kb-sanctions)\n- procurement_contracts_2025 (kb-procurement)\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Maria Gonzalez",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 2\nstatus: \"active\"\n---\n\n# Maria Gonzalez\n\n## Summary\n\nDirector of Oceanic Logistics Ltd. Signatory on Port Infrastructure Upgrade contract.\n\n## Connections\n\n- [[Oceanic Logistics Ltd]] — Director\n\n## Sources\n\n- [[business_registry_q1_2026]]\n- procurement_contracts_2025 (kb-procurement)\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "NorthStar Procurement Inc",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# NorthStar Procurement Inc\n\n## Summary\n\nGovernment procurement vendor based in Capital City.\n\n## Connections\n\n- [[Jens Hansen]] — Director\n- [[Samuel Osei]] — Director\n- Government IT Services — Contract vendor\n\n## Sources\n\n- [[business_registry_q1_2026]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Oceanic Logistics Ltd",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Oceanic Logistics Ltd\n\n## Summary\n\nShipping and logistics company registered in Port City.\n\n## Connections\n\n- [[Maria Gonzalez]] — Director\n- [[Jens Hansen]] — Director (alias Director Y)\n- Port Infrastructure Upgrade — Contract vendor\n\n## Sources\n\n- [[business_registry_q1_2026]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Samuel Osei",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Samuel Osei\n\n## Summary\n\nDirector of NorthStar Procurement Inc.\n\n## Connections\n\n- [[NorthStar Procurement Inc]] — Director\n\n## Sources\n\n- [[business_registry_q1_2026]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Beneficial Ownership",
+      "type": "concept",
+      "content": "---\ntype: \"concept\"\ndate_created: \"2026-05-27\"\nsource_count: 0\nstatus: \"active\"\n---\n\n# Beneficial Ownership\n\nThe right to enjoy benefits from ownership even when title is in another name. Relevant for tracing shell companies and hidden directors."
+    },
+    {
+      "title": "business_registry_q1_2026",
+      "type": "source",
+      "content": "---\ntype: \"source\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Source: business_registry_q1_2026.pdf\n\nFormat: pdf\n\n## Extracted Text\n\nBusiness Registry Extract - Q1 2026\nCompany: Oceanic Logistics Ltd\nRegistration Number: BR-2024-00891\nDirectors: Maria Gonzalez, Director Y (alias Jens Hansen)\nAddress: 45 Harbor Road, Port City\nStatus: Active\nCompany: NorthStar Procurement Inc\nRegistration Number: BR-2023-00412\nDirectors: Jens Hansen, Samuel Osei\nAddress: 88 Commerce Blvd, Capital City\nStatus: Active\n"
+    }
+  ],
+  "indexText": "# kb-business-registry Index\n\nContent catalog for the kb-business-registry knowledge base.\n\n## Entities\n\n- [[Oceanic Logistics Ltd]] — Shipping company in Port City\n- [[NorthStar Procurement Inc]] — Procurement vendor in Capital City\n- [[Maria Gonzalez]] — Director of Oceanic Logistics Ltd\n- [[Jens Hansen]] — Director linked to sanctions\n- [[Samuel Osei]] — Director of NorthStar Procurement Inc\n\n## Concepts\n\n- [[Beneficial Ownership]] — Domain concept for hidden ownership\n\n## Sources\n\n- [[business_registry_q1_2026]] — Registry extract PDF\n\n## Synthesis\n\n\n",
+  "logText": "- 2026-05-27T19:18:34.765Z — Ingested business_registry_q1_2026.pdf (pdf, 371 chars)\n- 2026-05-27T19:20:08.726Z — Demo wiki setup complete\n- 2026-05-27T19:20:12.559Z — Lint complete: 12 issues\n- 2026-05-27T19:20:33.013Z — Lint complete: 6 issues\n- 2026-05-27T19:20:57.768Z — Lint complete: 6 issues\n- 2026-05-27T19:21:30.791Z — Demo wiki setup complete\n- 2026-05-27T19:21:34.523Z — Lint complete: 0 issues\n",
+  "schemaText": "# Schema: kb-business-registry\n\n## Page Types\n\n| Type | Directory | Description |\n|------|-----------|-------------|\n| entity | `/wiki/entities/` | Companies, directors, addresses |\n| concept | `/wiki/concepts/` | Domain abstractions like beneficial ownership |\n| source | `/wiki/sources/` | Summaries of registry extracts |\n| synthesis | `/wiki/synthesis/` | Combined analysis across sources |\n\n## Ingest Rules\n\n- **PDF:** Parse with `pdf-parse`; extract company blocks; one entity per company.\n- **CSV/JSON:** Parse rows/objects; map columns to entity fields.\n- **Text:** Extract named entities via regex or LLM.\n\n## Query Behavior\n\n1. Read `index.md` to find companies or directors by name.\n2. Read entity pages for directorship links.\n3. Return structured evidence with registry identifiers.\n\n## Citation Format\n\n```\n[[Entity Name]](source:raw/business_registry_q1_2026.pdf)\n```\n\n## Verification Thresholds\n\n- **Explicit:** Director name appears in company record.\n- **Inference:** Directorship implied by address match only — flag.\n- **Out of context:** Partial name match without registry number — flag.\n"
+}

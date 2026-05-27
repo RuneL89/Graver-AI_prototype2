@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store.jsx';
+import { verifyBlock } from '../../agents/verification-agent.js';
 
 export default function VerificationDashboard() {
   const { state, dispatch } = useStore();
@@ -9,21 +10,11 @@ export default function VerificationDashboard() {
     if (!state.pendingBlock) return;
     setVerifying(true);
     try {
-      const res = await fetch('/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paragraph: state.pendingBlock.paragraph,
-          citations: state.pendingBlock.citations,
-        }),
+      const data = await verifyBlock(state.pendingBlock.paragraph, state.pendingBlock.citations, state.config);
+      dispatch({
+        type: 'SET_PENDING_BLOCK',
+        payload: { ...state.pendingBlock, verification: data },
       });
-      const data = await res.json();
-      if (res.ok) {
-        dispatch({
-          type: 'SET_PENDING_BLOCK',
-          payload: { ...state.pendingBlock, verification: data },
-        });
-      }
     } catch (err) {
       alert(err.message);
     } finally {

@@ -1,0 +1,7 @@
+{
+  "kbName": "kb-demo",
+  "pages": [],
+  "indexText": "# kb-demo Index\n\nContent catalog for the demo knowledge base.\n\n## Entities\n\n## Concepts\n\n## Sources\n\n## Synthesis\n",
+  "logText": "",
+  "schemaText": "# Schema: kb-demo\n\n## Page Types\n\n| Type | Directory | Description |\n|------|-----------|-------------|\n| entity | `/wiki/entities/` | One page per discovered entity |\n| concept | `/wiki/concepts/` | Domain abstractions |\n| source | `/wiki/sources/` | Summaries of raw documents |\n| synthesis | `/wiki/synthesis/` | Combined analysis |\n\n## Ingest Rules\n\n- **Text/Markdown:** Read directly; extract entities and relationships.\n- **CSV/JSON:** Parse structured rows/objects; one entity per row where applicable.\n- **PDF:** Parse with `pdf-parse`; extract text per page; store page references.\n\n## Query Behavior\n\n1. Read `index.md` to locate relevant pages.\n2. Drill into entity and source pages for detail.\n3. Synthesize answer with citations.\n\n## Citation Format\n\n```\n[[Entity Name]](source:raw/filename.pdf#page=3)\n```\n\n## Verification Thresholds\n\n- **Explicit statement:** Entity and relationship appear verbatim in source text.\n- **Inference:** Relationship implied but not directly stated — must be flagged.\n- **Out of context:** Passage used contradicts broader source meaning — must be flagged.\n"
+}

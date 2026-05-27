@@ -3,14 +3,22 @@ import { StoreProvider, useStore } from './store.jsx';
 import ConfigPage from './components/ConfigPage.jsx';
 import MainLayout from './components/MainLayout.jsx';
 
+function loadStoredConfig() {
+  try {
+    const raw = localStorage.getItem('llm-config');
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+  return { apiBaseUrl: '', modelName: '' };
+}
+
 function AppContent() {
   const [page, setPage] = useState('main');
   const { state, dispatch } = useStore();
 
   useEffect(() => {
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((data) => dispatch({ type: 'SET_CONFIG', payload: data }));
+    dispatch({ type: 'SET_CONFIG', payload: loadStoredConfig() });
   }, [dispatch]);
 
   return (

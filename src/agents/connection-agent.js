@@ -26,7 +26,6 @@ export async function buildGraph(bundles, config) {
     }
   }
 
-  // Cross-source connections by shared entity names
   const nodeList = Array.from(nodes.values());
   for (let i = 0; i < nodeList.length; i++) {
     for (let j = i + 1; j < nodeList.length; j++) {
@@ -44,7 +43,6 @@ export async function buildGraph(bundles, config) {
     }
   }
 
-  // Alias detection via LLM
   try {
     const prompt = `Given these entities from multiple knowledge bases:\n${nodeList
       .map((n) => `- ${n.label} (${n.sources.join(', ')})`)
@@ -62,7 +60,6 @@ export async function buildGraph(bundles, config) {
       }
     }
   } catch {
-    // Heuristic alias detection
     for (let i = 0; i < nodeList.length; i++) {
       for (let j = i + 1; j < nodeList.length; j++) {
         const a = nodeList[i];

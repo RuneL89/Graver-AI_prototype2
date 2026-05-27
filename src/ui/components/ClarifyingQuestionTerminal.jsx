@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store.jsx';
+import { routeQuestion } from '../../agents/question-router.js';
 
 export default function ClarifyingQuestionTerminal() {
   const { state, dispatch } = useStore();
@@ -20,24 +21,12 @@ export default function ClarifyingQuestionTerminal() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/clarify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question,
-          sessionContext: {
-            activeBases: state.activatedBases.filter((b) => b.activated).map((b) => b.kbName),
-            history: state.conversation.filter((c) => c.role === 'user').map((c) => c.text),
-          },
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        dispatch({ type: 'UPDATE_FROM_CLARIFY', payload: { graph: data.graph } });
-        dispatch({ type: 'ADD_CONVERSATION', payload: { role: 'assistant', text: 'Evidence updated in graph.' } });
-      } else {
-        dispatch({ type: 'ADD_CONVERSATION', payload: { role: 'assistant', text: `Error: ${data.error}` } });
-      }
+      const data = await routeQuestion(question, {
+        activeBases: state.activatedBases.filter((b) => b.activated).map((b) => b.kbName),
+        history: state.conversation.filter((c) => c.role === 'user').map((c) => c.text),
+      }, state.config);
+      dispatch({ type: 'UPDATE_FROM_CLARIFY', payload: { graph: data.graph } });
+      dispatch({ type: 'ADD_CONVERSATION', payload: { role: 'assistant', text: 'Evidence updated in graph.' } });
     } catch (err) {
       dispatch({ type: 'ADD_CONVERSATION', payload: { role: 'assistant', text: `Error: ${err.message}` } });
     } finally {

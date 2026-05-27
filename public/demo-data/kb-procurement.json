@@ -1,0 +1,48 @@
+{
+  "kbName": "kb-procurement",
+  "pages": [
+    {
+      "title": "Jens Hansen",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Jens Hansen\n\n## Summary\n\nSignatory Director on PC-2025-00991 for NorthStar Procurement Inc.\n\n## Connections\n\n- [[PC-2025-00991]] — Signatory\n- [[NorthStar Procurement Inc]] — Company\n\n## Sources\n\n- [[procurement_contracts_2025]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Maria Gonzalez",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Maria Gonzalez\n\n## Summary\n\nSignatory Director on PC-2025-00442 for Oceanic Logistics Ltd.\n\n## Connections\n\n- [[PC-2025-00442]] — Signatory\n- [[Oceanic Logistics Ltd]] — Company\n\n## Sources\n\n- [[procurement_contracts_2025]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "NorthStar Procurement Inc",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# NorthStar Procurement Inc\n\n## Summary\n\nVendor on Government IT Services (PC-2025-00991).\n\n## Connections\n\n- [[PC-2025-00991]] — Contract\n- [[Jens Hansen]] — Signatory\n\n## Sources\n\n- [[procurement_contracts_2025]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Oceanic Logistics Ltd",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Oceanic Logistics Ltd\n\n## Summary\n\nVendor on Port Infrastructure Upgrade (PC-2025-00442).\n\n## Connections\n\n- [[PC-2025-00442]] — Contract\n- [[Maria Gonzalez]] — Signatory\n\n## Sources\n\n- [[procurement_contracts_2025]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "PC-2025-00442",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# PC-2025-00442\n\n## Summary\n\nPort Infrastructure Upgrade contract awarded to Oceanic Logistics Ltd for USD 4,200,000. Signed by Maria Gonzalez on 2025-08-15.\n\n## Connections\n\n- [[Oceanic Logistics Ltd]] — Vendor\n- [[Maria Gonzalez]] — Signatory Director\n\n## Sources\n\n- [[procurement_contracts_2025]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "PC-2025-00991",
+      "type": "entitie",
+      "content": "---\ntype: \"entity\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# PC-2025-00991\n\n## Summary\n\nGovernment IT Services contract awarded to NorthStar Procurement Inc for USD 1,850,000. Signed by Jens Hansen on 2025-10-03.\n\n## Connections\n\n- [[NorthStar Procurement Inc]] — Vendor\n- [[Jens Hansen]] — Signatory Director\n\n## Sources\n\n- [[procurement_contracts_2025]]\n\n## Contradictions\n\nNone."
+    },
+    {
+      "title": "Public Procurement Threshold",
+      "type": "concept",
+      "content": "---\ntype: \"concept\"\ndate_created: \"2026-05-27\"\nsource_count: 0\nstatus: \"active\"\n---\n\n# Public Procurement Threshold\n\nFinancial limits above which public contracts require competitive bidding and enhanced disclosure."
+    },
+    {
+      "title": "procurement_contracts_2025",
+      "type": "source",
+      "content": "---\ntype: \"source\"\ndate_created: \"2026-05-27\"\nsource_count: 1\nstatus: \"active\"\n---\n\n# Source: procurement_contracts_2025.pdf\n\nFormat: pdf\n\n## Extracted Text\n\nPublic Procurement Contracts - 2025\nContract ID: PC-2025-00442\nTitle: Port Infrastructure Upgrade\nVendor: Oceanic Logistics Ltd\nValue: USD 4,200,000\nSignatory Director: Maria Gonzalez\nDate: 2025-08-15\nContract ID: PC-2025-00991\nTitle: Government IT Services\nVendor: NorthStar Procurement Inc\nValue: USD 1,850,000\nSignatory Director: Jens Hansen\nDate: 2025-10-03\n"
+    }
+  ],
+  "indexText": "# kb-procurement Index\n\nContent catalog for the kb-procurement knowledge base.\n\n## Entities\n\n- [[PC-2025-00442]] — Port Infrastructure Upgrade, USD 4.2M\n- [[PC-2025-00991]] — Government IT Services, USD 1.85M\n- [[Oceanic Logistics Ltd]] — Vendor on PC-2025-00442\n- [[NorthStar Procurement Inc]] — Vendor on PC-2025-00991\n- [[Maria Gonzalez]] — Signatory on PC-2025-00442\n- [[Jens Hansen]] — Signatory on PC-2025-00991\n\n## Concepts\n\n- [[Public Procurement Threshold]] — Financial disclosure limits\n\n## Sources\n\n- [[procurement_contracts_2025]] — Procurement contracts PDF\n\n## Synthesis\n\n\n",
+  "logText": "- 2026-05-27T19:18:36.824Z — Ingested procurement_contracts_2025.pdf (pdf, 362 chars)\n- 2026-05-27T19:20:08.736Z — Demo wiki setup complete\n- 2026-05-27T19:20:13.996Z — Lint complete: 14 issues\n- 2026-05-27T19:20:33.085Z — Lint complete: 0 issues\n- 2026-05-27T19:20:57.841Z — Lint complete: 0 issues\n- 2026-05-27T19:21:30.801Z — Demo wiki setup complete\n- 2026-05-27T19:21:34.596Z — Lint complete: 0 issues\n",
+  "schemaText": "# Schema: kb-procurement\n\n## Page Types\n\n| Type | Directory | Description |\n|------|-----------|-------------|\n| entity | `/wiki/entities/` | Contracts, vendors, signatories |\n| concept | `/wiki/concepts/` | Procurement types, thresholds |\n| source | `/wiki/sources/` | Summaries of contract documents |\n| synthesis | `/wiki/synthesis/` | Vendor performance analysis |\n\n## Ingest Rules\n\n- **PDF:** Parse with `pdf-parse`; extract contract blocks with ID, vendor, value, date.\n- **CSV/JSON:** One contract per row/object.\n\n## Query Behavior\n\n1. Read `index.md` for contract IDs or vendor names.\n2. Read entity pages for contract details and signatories.\n3. Return value and date with exact citations.\n\n## Citation Format\n\n```\n[[Contract ID]](source:raw/procurement_contracts_2025.pdf)\n```\n\n## Verification Thresholds\n\n- **Explicit:** Contract value and vendor appear in source.\n- **Inference:** Vendor linked to contract by address alone — flag.\n- **Out of context:** Contract from wrong year used — flag.\n"
+}

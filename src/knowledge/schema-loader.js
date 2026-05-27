@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+import { getSchema } from '../lib/wikiStore.js';
 
 const REQUIRED_SECTIONS = [
   'Page Types',
@@ -10,8 +9,7 @@ const REQUIRED_SECTIONS = [
 ];
 
 export async function loadSchema(kbName) {
-  const schemaPath = path.resolve('data', kbName, 'schema.md');
-  const text = await fs.readFile(schemaPath, 'utf-8');
+  const text = (await getSchema(kbName)) || '';
 
   const missing = REQUIRED_SECTIONS.filter((s) => !text.includes(s));
   if (missing.length > 0) {
