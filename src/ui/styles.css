@@ -1,0 +1,6 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; }
+input, textarea, button { font-family: inherit; }
+button { cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; }
+button:hover:not(:disabled) { background: #f3f4f6; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }

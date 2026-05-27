@@ -1,1 +1,448 @@
-# Graver-AI_prototype2
+# AI-Assisted Investigative Journalism Prototype
+
+> **Version:** 1.1  
+> **Status:** Prototype  
+> **Companion Documents:** See `FRD_AI_Investigative_Journalism_Prototype_v1.1_APPROVED.md` for full functional requirements and `IMPLEMENTATION_PLAN_AI_Investigative_Journalism_Prototype_v1.1.md` for sprint-based implementation details.
+
+---
+
+## 1. Introduction (Elevator Pitch)
+
+Investigative journalists often work with disconnected datasets—business registries, sanctions lists, procurement records, customs logs—each stored in separate silos. Tracing a single person or company across these sources requires manual cross-referencing, specialized query syntax, and hours of tedious work.
+
+This prototype is a **browser-based demo** that automates that cross-source tracing using a multi-agent AI architecture. A journalist enters a plain-language tip (e.g., *"Company X appears in procurement contracts and may be linked to sanctioned directors"*). The system then:
+
+1. **Scores** the tip against multiple domain-specific knowledge bases.
+2. **Spawns parallel research agents** to search each relevant base.
+3. **Discovers cross-source connections** between entities.
+4. **Drafts auditable note-blocks** with full citation trails.
+5. **Verifies every claim** against original source documents before it ever reaches a draft.
+
+What makes it unique is not just the AI assistance, but the **auditability** and **structured evidence chain**: every paragraph in the final draft carries a complete trail back to the exact source passage. The system is backed by a **Karpathy-style LLM Wiki**—a persistent, compounding markdown knowledge layer—rather than a generic RAG retrieval system.
+
+**Who is it for?** Investigative journalists and editors who need to trace entities across structured databases without writing database queries.
+
+**Prototype Limitations:** This is a pre-loaded demo. There are no live API connections to external registries, no persistent user accounts, and no automated continuous ingest. All wiki content is compiled ahead of time by the coding agent. See FRD Section 6.3 for the full limitation list.
+
+---
+
+## 2. End-User Friendly Functional Architecture
+
+The system is organized into three functional groups that work together like an investigative newsroom:
+
+### Group 1: Journalist Perspective (The Newsroom Desk)
+This is what the journalist sees in the browser. It includes:
+- A **Tip Entry Portal** where you type a free-form lead.
+- An **Active Knowledge Base Panel** showing which databases the system thinks are relevant—with the ability to override its choices.
+- A **Connection Graph Navigator** displaying people, companies, and contracts as an interactive network.
+- A **Verification Dashboard** where every AI-drafted paragraph is audited side-by-side with its source passages.
+- A **Note-Block Composer** where verified paragraphs accumulate into an article draft.
+- A **Clarifying Question Terminal** for follow-up questions at any stage.
+- A **Configuration Page** to set the LLM backend endpoint.
+
+### Group 2: Karpathy Knowledge Backbone (The Research Library)
+This is the persistent knowledge layer—think of it as a research library maintained by a meticulous librarian (the coding agent). Each domain (business registry, sanctions, procurement) has its own **knowledge base** containing:
+- **Raw Source Vault:** Immutable original documents (PDFs, CSVs, text files).
+- **Compiled Wiki Layer:** LLM-maintained markdown pages for every entity, concept, and source summary, cross-linked with `[[wikilinks]]`.
+- **Schema:** Per-domain rules that tell agents how to ingest, query, cite, and verify.
+
+The journalist-facing UI only **reads** from this layer. It never creates or edits wiki pages. All wiki lifecycle operations (ingest, query, lint) are performed by the coding agent during development and data preparation.
+
+### Group 3: Agent Orchestration (The Investigation Team)
+This is the engine room. When a tip is submitted, a team of six independent AI agents springs into action, each with its own private LLM session:
+
+1. **Relevance Scoring Agent** reads every knowledge base catalog and decides which ones are relevant.
+2. **Parallel Research Swarm** spawns one agent per activated base to search for matching passages and entities.
+3. **Connection Agent** compares evidence from all bases and builds a relationship graph.
+4. **Writing Agent** drafts a paragraph when you click a connection in the graph.
+5. **Verification Agent** checks that paragraph against original source documents.
+6. **Question Router** handles follow-up questions and dispatches new research queries.
+
+Because each agent uses an **independent LLM session**, they do not share context windows or conversation state. This isolation is critical for auditability and prevents cross-contamination of evidence.
+
+---
+
+## 3. Step-by-Step Architecture Description of App Flow
+
+This section explains how data moves through the system from tip to finished note-block, including the orchestration logic and the rejection loop that keeps bad evidence out of the composer.
+
+### 3.1 Tip Submission & Relevance Scoring
+
+1. The journalist submits a tip via `POST /api/investigate`.
+2. The backend instantiates the **Relevance Scoring Agent** (FR-301) with a fresh `LLMClient`.
+3. The agent reads `index.md` from every knowledge base listed in `kb-registry/index.md`.
+4. It scores the tip against each base (entity names, concept coverage, domain overlap) and returns a ranked array:
+   ```json
+   [{ "kbName": "kb-business-registry", "score": 0.85, "justification": "...", "activated": true }]
+   ```
+5. The UI displays this list in the **Active Knowledge Base Panel** (FR-102). The journalist can toggle bases on/off. Any change triggers a re-run of the full pipeline.
+
+### 3.2 Parallel Research Swarm
+
+1. The **Swarm Orchestrator** (FR-302) receives the tip and the list of activated bases.
+2. It spawns one `ResearchAgent` per base, each with its own `LLMClient`, running concurrently via `Promise.all`.
+3. Each agent:
+   - Reads its assigned base's `index.md`.
+   - Identifies relevant entity/concept pages.
+   - Reads those pages and extracts passages and entities matching the tip.
+4. Each agent returns an **evidence bundle**:
+   ```json
+   {
+     "kbName": "kb-business-registry",
+     "passages": [{ "text": "...", "sourcePage": "entities/Jens Hansen.md", "entityRefs": ["Jens Hansen"] }],
+     "entities": [{ "name": "Jens Hansen", "type": "person", "wikiPage": "entities/Jens Hansen.md" }]
+   }
+   ```
+5. The swarm waits for all agents to complete before returning aggregated bundles. A slow agent does not block the others.
+
+### 3.3 Connection Discovery
+
+1. The **Connection Agent** (FR-303) instantiates its own `LLMClient`.
+2. It consumes all evidence bundles and builds a graph:
+   - **Nodes:** entities with type and provenance (which knowledge bases mention them).
+   - **Edges:** relationships between entities that appear in the same source.
+3. It flags potential aliases (e.g., "Jens Hansen" vs. "J. Hansen") for human review.
+4. The graph JSON is sent to the UI and rendered by the **Connection Graph Navigator** (FR-103).
+
+### 3.4 Writing & The Rejection Loop
+
+When the journalist clicks an edge or node in the graph:
+
+1. The **Writing Agent** (FR-304) is instantiated with its own `LLMClient`.
+   - **Critical constraint:** It receives the full swarm evidence bundles as a mandatory constructor argument. If bundles are missing, it throws an error.
+   - It is physically incapable of accessing any data outside those bundles.
+2. It locates passages relevant to the clicked connection and prompts the LLM to draft a single paragraph with inline citations.
+3. The output is sent to the **Verification Dashboard** (FR-105) with status **PENDING**.
+
+### 3.5 Verification Gate
+
+1. The journalist clicks **Verify**.
+2. The **Verification Agent** (FR-305) instantiates its own `LLMClient`.
+3. It reads the raw source files directly (it is the only agent permitted to do this).
+4. It checks three things:
+   - Do the cited entities exist in the raw sources?
+   - Is the relationship **explicitly stated**, or is it an LLM inference?
+   - Were any passages taken out of context?
+5. It returns:
+   - `VERIFIED` → the journalist can click **Accept into Composer**.
+   - `FLAGGED` → a specific reason is shown (e.g., "inferred relationship," "passage out of context"). The journalist can **Reject** the block.
+
+### 3.6 Clarifying Questions
+
+1. The journalist types a question in the terminal (FR-106).
+2. The **Question Router** (FR-306) reads all active `index.md` files, decides which bases to query, and dispatches a new mini-swarm.
+3. New evidence bundles are integrated into the existing graph, updating nodes and edges without resetting the user's current view.
+
+### 3.7 Data Flow Summary
+
+```
+Tip → Relevance Scorer → Activated Bases → Parallel Swarm → Evidence Bundles
+                                                             ↓
+Clarifying Questions ← Question Router ← Graph Updates ← Connection Agent
+                                                             ↓
+Composer ← Verification Dashboard ← Verification Agent ← Writing Agent
+```
+
+**Rejection criteria at each stage:**
+- Relevance Scorer: bases below threshold (default 0.6) are excluded.
+- Writing Agent: refuses to run without swarm bundles.
+- Verification Agent: flags inferred relationships, missing entities, or out-of-context passages.
+- Journalist: manual accept/reject in the Verification Dashboard.
+
+---
+
+## 4. Detailed Technical Architecture
+
+### 4.1 Tech Stack & Dependencies
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Backend runtime | Node.js (ESM) | 20+ |
+| Web framework | Express | 4.19.2 |
+| PDF parsing | `pdf-parse` + Python `pdfplumber` fallback | 1.1.1 |
+| YAML/Frontmatter | `js-yaml` | 4.1.0 |
+| Frontend | React | 18.3.1 |
+| Build tool | Vite | 5.2.12 |
+| Graph visualization | Cytoscape.js | 3.26.0 |
+| Dev server | Concurrently + Nodemon | latest |
+
+No persistent database is used. All session state is held in memory.
+
+### 4.2 Directory Structure & Module Responsibilities
+
+```
+/ai-investigative-journalism-prototype
+├── src/
+│   ├── agents/                 # Group 3: Agent Orchestration
+│   │   ├── relevance-scorer.js     # FR-301: Scores tips against KB indexes
+│   │   ├── swarm-orchestrator.js   # FR-302: Spawns parallel research agents
+│   │   ├── connection-agent.js     # FR-303: Builds cross-source graph
+│   │   ├── writing-agent.js        # FR-304: Drafts paragraphs from swarm data
+│   │   ├── verification-agent.js   # FR-305: Verifies citations against raw vault
+│   │   └── question-router.js      # FR-306: Routes clarifying questions
+│   ├── knowledge/              # Group 2: Karpathy Knowledge Backbone
+│   │   ├── raw-vault.js            # FR-201: Immutable raw source reader
+│   │   ├── wiki-page.js            # FR-202: WikiPage class, index/log helpers
+│   │   ├── schema-loader.js        # FR-203: Parses schema.md into config objects
+│   │   ├── query.js                # FR-204: Query module for agents
+│   │   ├── ingest-cli.js           # FR-204: Ingest script (coding-agent only)
+│   │   └── lint-cli.js             # FR-204: Lint script (coding-agent only)
+│   ├── ui/                     # Group 1: Journalist Perspective
+│   │   ├── main.jsx                # React entry point
+│   │   ├── App.jsx                 # Top-level routing (main / config)
+│   │   ├── store.jsx               # Global React Context + reducer state
+│   │   ├── styles.css              # Global CSS
+│   │   └── components/
+│   │       ├── MainLayout.jsx          # 3-pane responsive layout
+│   │       ├── TipEntry.jsx            # FR-101: Tip input
+│   │       ├── ActiveKbPanel.jsx       # FR-102: KB activation panel
+│   │       ├── ConnectionGraph.jsx     # FR-103: Cytoscape graph
+│   │       ├── VerificationDashboard.jsx # FR-105: Audit view
+│   │       ├── NoteBlockComposer.jsx   # FR-104: Draft composer
+│   │       ├── ClarifyingQuestionTerminal.jsx # FR-106: Chat interface
+│   │       └── ConfigPage.jsx          # FR-107: LLM settings
+│   ├── shared/
+│   │   └── llm-client.js           # OpenAI-compatible client with debug logging
+│   └── server.js               # Express API server + static file serving
+├── data/
+│   ├── kb-registry/            # Wiki-of-wikis catalog
+│   │   └── index.md
+│   ├── kb-demo/                # Empty scaffold for pattern proof
+│   │   ├── raw/
+│   │   ├── wiki/
+│   │   └── schema.md
+│   ├── kb-business-registry/   # Demo dataset: companies & directors
+│   │   ├── raw/
+│   │   ├── wiki/
+│   │   └── schema.md
+│   ├── kb-sanctions/           # Demo dataset: sanctioned entities
+│   │   ├── raw/
+│   │   ├── wiki/
+│   │   └── schema.md
+│   └── kb-procurement/         # Demo dataset: public contracts
+│       ├── raw/
+│       ├── wiki/
+│       └── schema.md
+├── docs/
+│   ├── LLM_WIKI_MASTER_INSTRUCTIONS.md  # Wiki governance document
+│   └── demo-script.md                   # End-to-end demo walkthrough
+├── package.json
+├── vite.config.js
+└── README.md
+```
+
+### 4.3 API Contract Details
+
+#### `POST /api/config`
+**Request:**
+```json
+{ "apiBaseUrl": "https://api.openai.com", "modelName": "gpt-4o" }
+```
+**Response:**
+```json
+{ "success": true, "config": { "apiBaseUrl": "...", "modelName": "..." } }
+```
+**Errors:**
+- `400` — Invalid HTTPS URL.
+- `409` — Agents running; `confirmRequired: true`.
+
+#### `GET /api/config`
+**Response:**
+```json
+{ "apiBaseUrl": "...", "modelName": "..." }
+```
+
+#### `POST /api/investigate`
+**Request:**
+```json
+{ "tip": "Company linked to sanctioned directors..." }
+```
+**Response:**
+```json
+{
+  "scores": [{ "kbName": "...", "score": 0.85, "justification": "...", "activated": true }],
+  "bundles": [{ "kbName": "...", "passages": [...], "entities": [...] }],
+  "graph": { "nodes": [...], "edges": [...], "aliases": [...], "bundles": [...] }
+}
+```
+
+#### `POST /api/write`
+**Request:**
+```json
+{ "connectionId": "jens-hansen-northstar-procurement-inc", "bundles": [...] }
+```
+**Response:**
+```json
+{ "paragraph": "...", "citations": [{ "source": "...", "passage": "...", "wikiPage": "..." }] }
+```
+
+#### `POST /api/verify`
+**Request:**
+```json
+{ "paragraph": "...", "citations": [...] }
+```
+**Response:**
+```json
+{ "status": "VERIFIED" | "FLAGGED", "reason": "..." | null }
+```
+
+#### `POST /api/clarify`
+**Request:**
+```json
+{ "question": "Does Director Y have other companies?", "sessionContext": { "activeBases": [...], "history": [...] } }
+```
+**Response:**
+```json
+{ "question": "...", "targetBases": [...], "bundles": [...], "graph": {...}, "history": [...] }
+```
+
+### 4.4 Agent Instantiation & LLM Session Isolation
+
+Every agent module exports a function that creates a **new** `LLMClient` instance locally:
+
+```js
+const client = new LLMClient(config);
+console.log(`[AgentName] instanceId=${client.instanceId}`);
+```
+
+- The `instanceId` is a UUID generated at construction time.
+- `conversationHistory` is stored as an instance property, not a global or shared variable.
+- No two agents ever reference the same `LLMClient` object.
+- Debug logs in `logs/llm-debug.log` record every request/response with the `instanceId`, making isolation auditable.
+
+### 4.5 Wiki Layer Runtime Access
+
+At runtime, the UI and agents are **read-only** against the compiled wiki layer:
+- Agents read `index.md` to locate pages, then read entity/concept pages from `/wiki/entities/` and `/wiki/concepts/`.
+- The UI never writes to the wiki.
+- Wiki creation, ingest, and lint are executed as CLI scripts (`npm run ingest`, `npm run lint`) by the coding agent, not by the running application.
+
+### 4.6 State Management Architecture
+
+The frontend uses a single React Context with a `useReducer` pattern:
+
+```js
+const [state, dispatch] = useReducer(reducer, initialState);
+```
+
+State tree:
+- `config` — LLM endpoint settings.
+- `tip` — Current investigative tip.
+- `loading` — Global loading flag during agent runs.
+- `activatedBases` — Array of KB scores from Relevance Scorer.
+- `graph` — Connection Agent output (nodes, edges, aliases, bundles).
+- `noteBlocks` — Accepted verified paragraphs.
+- `pendingBlock` — Paragraph currently in Verification Dashboard.
+- `conversation` — Clarifying question history.
+- `selectedConnection` — Last clicked graph edge/node ID.
+
+All components read from and dispatch to this single store. Updates propagate via React's re-rendering mechanism without page reloads.
+
+### 4.7 Error Handling & Logging Strategy
+
+- **LLM errors:** Descriptive errors bubble up to the UI with HTTP 500 and a message body. Agents also have heuristic fallbacks (keyword matching) so the prototype remains demonstrable even without a live LLM.
+- **PDF errors:** If `pdf-parse` fails, the system falls back to a Python `pdfplumber` subprocess. If both fail, the error is logged and the file is skipped; the raw vault remains immutable.
+- **Debug logging:** Every LLM request and response is appended to `logs/llm-debug.log` as JSON lines with timestamps and `instanceId`.
+- **Agent errors:** Caught at the Express route level and returned as `{ error: "..." }` with a 500 status.
+
+### 4.8 Security Considerations
+
+- **HTTPS validation:** The Configuration Page rejects non-HTTPS API base URLs.
+- **No persistent database:** Session state is held in memory only. There is no user authentication or multi-tenancy.
+- **Immutable raw vault:** Raw source directories are read-only at runtime. Any attempt to modify them programmatically throws an error.
+- **No secrets in client:** API keys are not exposed to the browser. The backend holds the config and passes it to agent constructors.
+- **Input sanitization:** Express `express.json()` middleware is used; no SQL or NoSQL injection vectors exist because there is no database.
+
+---
+
+## 5. Project Structure
+
+```
+.
+├── data/
+│   ├── kb-registry/
+│   │   └── index.md                 # Wiki-of-wikis catalog
+│   ├── kb-demo/
+│   │   ├── raw/                     # Empty demo raw directory
+│   │   ├── wiki/
+│   │   │   ├── index.md             # Content catalog
+│   │   │   ├── log.md               # Chronological record
+│   │   │   ├── entities/            # Entity pages
+│   │   │   ├── concepts/            # Concept pages
+│   │   │   └── synthesis/           # Analysis pages
+│   │   └── schema.md                # Demo schema
+│   ├── kb-business-registry/        # Demo: company registrations
+│   ├── kb-sanctions/                # Demo: sanctions list
+│   └── kb-procurement/              # Demo: public contracts
+├── docs/
+│   ├── LLM_WIKI_MASTER_INSTRUCTIONS.md  # Wiki governance (10 rules)
+│   └── demo-script.md                   # Step-by-step demo script
+├── src/
+│   ├── agents/
+│   │   ├── relevance-scorer.js      # FR-301
+│   │   ├── swarm-orchestrator.js    # FR-302
+│   │   ├── connection-agent.js      # FR-303
+│   │   ├── writing-agent.js         # FR-304
+│   │   ├── verification-agent.js    # FR-305
+│   │   └── question-router.js       # FR-306
+│   ├── knowledge/
+│   │   ├── raw-vault.js             # FR-201: PDF/text/CSV/JSON reader
+│   │   ├── wiki-page.js             # FR-202: Frontmatter + wikilink enforcement
+│   │   ├── schema-loader.js         # FR-203: Schema parser & validator
+│   │   ├── query.js                 # FR-204: Agent query interface
+│   │   ├── ingest-cli.js            # FR-204: Ingest script
+│   │   └── lint-cli.js              # FR-204: Lint script
+│   ├── ui/
+│   │   ├── main.jsx                 # React entry
+│   │   ├── App.jsx                  # Root component & routing
+│   │   ├── store.jsx                # Global React Context state
+│   │   ├── styles.css               # Global styles
+│   │   └── components/
+│   │       ├── MainLayout.jsx           # 3-pane layout
+│   │       ├── TipEntry.jsx             # FR-101
+│   │       ├── ActiveKbPanel.jsx        # FR-102
+│   │       ├── ConnectionGraph.jsx      # FR-103
+│   │       ├── NoteBlockComposer.jsx    # FR-104
+│   │       ├── VerificationDashboard.jsx # FR-105
+│   │       ├── ClarifyingQuestionTerminal.jsx # FR-106
+│   │       └── ConfigPage.jsx           # FR-107
+│   ├── shared/
+│   │   └── llm-client.js            # OpenAI-compatible LLM client
+│   └── server.js                    # Express server + API routes
+├── package.json                     # Dependencies & scripts
+├── vite.config.js                   # Vite build + proxy config
+├── index.html                       # HTML entry point
+└── README.md                        # This file
+```
+
+---
+
+## Setup Instructions
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start the development server (serves frontend + backend)
+npm run dev
+
+# 3. Open browser
+# http://localhost:5173
+```
+
+The dev server starts:
+- Backend API on `http://localhost:3001`
+- Frontend dev server on `http://localhost:5173` (proxies `/api` to backend)
+
+### Optional: Demo dataset ingest
+If you add new raw sources, run:
+```bash
+npm run ingest --kb=kb-business-registry --source=raw/newfile.pdf
+npm run lint --kb=kb-business-registry
+```
+
+---
+
+**References:**
+- Functional Requirements: `FRD_AI_Investigative_Journalism_Prototype_v1.1_APPROVED.md`
+- Implementation Plan: `IMPLEMENTATION_PLAN_AI_Investigative_Journalism_Prototype_v1.1.md`
