@@ -71,20 +71,16 @@ export class LLMClient {
         { role: 'assistant', content: responseText }
       );
     } catch (err) {
-      const isNetworkError = err.message === 'Failed to fetch';
-      const friendlyMessage = isNetworkError
-        ? `Network error: cannot reach LLM API at ${this.baseUrl}/v1/chat/completions. Check: (1) API Base URL is correct, (2) you have internet access, (3) the API allows CORS from localhost, (4) the server is running.`
-        : err.message;
       const errorLog = {
         timestamp: new Date().toISOString(),
         instanceId: this.instanceId,
         requestId,
         type: 'ERROR',
-        error: friendlyMessage,
+        error: err.message,
       };
       DEBUG_LOG.push(errorLog);
-      console.error(`[LLMClient ${this.instanceId}] ERROR`, requestId, friendlyMessage);
-      throw new Error(friendlyMessage);
+      console.error(`[LLMClient ${this.instanceId}] ERROR`, requestId, err.message);
+      throw err;
     }
 
     return responseText;
