@@ -17,12 +17,15 @@ export default function DocumentUploader() {
   }, [kbs]);
 
   function validateConfig() {
-    const { apiBaseUrl, modelName } = state.config || {};
+    const { apiBaseUrl, modelName, apiKey } = state.config || {};
     if (!apiBaseUrl || !modelName) {
       return 'Please configure LLM API in Settings before uploading documents.';
     }
     if (apiBaseUrl && !apiBaseUrl.startsWith('https://')) {
       return 'LLM API URL must be a valid HTTPS endpoint.';
+    }
+    if (!apiKey || apiKey === 'dummy-key') {
+      return 'Please enter a valid API Key in Settings.';
     }
     return null;
   }
