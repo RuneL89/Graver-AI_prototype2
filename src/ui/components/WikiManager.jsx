@@ -124,6 +124,13 @@ export default function WikiManager({ onOpenViewer }) {
     setEditSchema(false);
   }
 
+  // Auto-refresh selected KB when ingestion completes
+  useEffect(() => {
+    if (state.ingestion?.status === 'done' && selected) {
+      selectKb(selected);
+    }
+  }, [state.ingestion?.status, selected]);
+
   async function saveSchema() {
     await setSchema(selected, schema);
     await appendWikiLog(selected, 'Schema updated');

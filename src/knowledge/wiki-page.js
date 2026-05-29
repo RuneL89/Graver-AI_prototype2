@@ -81,10 +81,21 @@ export function parseIndex(text) {
     else if (line.startsWith('## Concepts')) current = 'concepts';
     else if (line.startsWith('## Sources')) current = 'sources';
     else if (line.startsWith('## Synthesis')) current = 'synthesis';
-    else if (current && line.trim().startsWith('- ')) {
-      const match = line.match(/- (?:\[\[)?([^\]]+)(?:\]\])?\s*(?:[-–—]\s*(.*))?/);
+    else if (current && line.trim() && !line.trim().startsWith('#')) {
+      const trimmed = line.trim();
+      // Require at least one marker: bullet, wikilink, or dash separator
+      const hasBullet = /^[-*]\s/.test(trimmed);
+      const hasWikilink = /\[\[/.test(trimmed);
+      const hasDash = /[-–—]/.test(trimmed);
+      if (!hasBullet && !hasWikilink && !hasDash) continue;
+
+      const match = trimmed.match(/^(?:[-*]\s+)?(?:\[\[)?([^\]\n#]+)(?:\]\])?\s*(?:[-–—]\s*(.*))?$/);
       if (match) {
-        sections[current].push({ title: match[1].trim(), summary: (match[2] || '').trim() });
+        const title = match[1].trim();
+        // Skip decorative lines like --- or ***
+        if (title && !/^[—\-_*]+$/.test(title)) {
+          sections[current].push({ title, summary: (match[2] || '').trim() });
+        }
       }
     }
   }

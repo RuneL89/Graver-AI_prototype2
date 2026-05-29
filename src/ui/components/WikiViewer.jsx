@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { marked } from 'marked';
+import { useStore } from '../store.jsx';
 import { readWikiIndex, loadWikiPage } from '../../lib/wikiStore.js';
 import { parseIndex } from '../../knowledge/wiki-page.js';
 
@@ -11,28 +12,37 @@ const SECTIONS = [
 ];
 
 export default function WikiViewer({ kbName, onClose }) {
+  const { state } = useStore();
   const [index, setIndex] = useState(null);
   const [selectedPage, setSelectedPage] = useState(null);
   const [pageContent, setPageContent] = useState('');
   const [titleMap, setTitleMap] = useState(new Map());
   const mountedRef = useRef(true);
-
+  const selectedPageRef = useRef(selectedPage);
   useEffect(() => {
+    selectedPageRef.current = selectedPage;
+  }, [selectedPage]);
+
+  const loadIndexAndPages = useCallback(async () => {
     mountedRef.current = true;
-    async function init() {
-      const indexMd = await readWikiIndex(kbName);
-      if (!mountedRef.current) return;
-      const parsed = parseIndex(indexMd);
-      setIndex(parsed);
+    const indexMd = await readWikiIndex(kbName);
+    if (!mountedRef.current) return;
+    const parsed = parseIndex(indexMd);
+    setIndex(parsed);
 
-      const map = new Map();
-      for (const section of SECTIONS) {
-        for (const item of (parsed[section.key] || [])) {
-          map.set(item.title, section.pageType);
-        }
+    const map = new Map();
+    for (const section of SECTIONS) {
+      for (const item of (parsed[section.key] || [])) {
+        map.set(item.title, section.pageType);
       }
-      setTitleMap(map);
+    }
+    setTitleMap(map);
 
+    // Try to preserve currently selected page if it still exists
+    const currentTitle = selectedPageRef.current?.title;
+    if (currentTitle && map.has(currentTitle)) {
+      await showPage(currentTitle, map);
+    } else {
       for (const section of SECTIONS) {
         const items = parsed[section.key] || [];
         if (items.length > 0) {
@@ -41,9 +51,19 @@ export default function WikiViewer({ kbName, onClose }) {
         }
       }
     }
-    init();
-    return () => { mountedRef.current = false; };
   }, [kbName]);
+
+  useEffect(() => {
+    loadIndexAndPages();
+    return () => { mountedRef.current = false; };
+  }, [kbName, loadIndexAndPages]);
+
+  // Auto-refresh when ingestion completes
+  useEffect(() => {
+    if (state.ingestion?.status === 'done') {
+      loadIndexAndPages();
+    }
+  }, [state.ingestion?.status, loadIndexAndPages]);
 
   async function showPage(title, map = titleMap) {
     const pageType = map.get(title);

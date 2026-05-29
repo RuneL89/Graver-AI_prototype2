@@ -42,6 +42,23 @@ Rules:
   after the em-dash. The Relevance Scoring Agent reads only the index to decide 
   which wikis are relevant to a journalist's tip. Vague or missing summaries 
   directly degrade the accuracy of relevance scoring.
+- updatedIndex entries MUST use markdown bullet lists: \`- [[Title]] — summary\`.
+  Do NOT omit the \`- \` prefix. Example format:
+
+  \`\`\`
+  # {kbName}
+
+  ## Entities
+  - [[Entity Name]] — brief description
+
+  ## Concepts
+  - [[Concept Name]] — brief description
+
+  ## Sources
+  - [[Source Title]] — summary of coverage
+
+  ## Synthesis
+  \`\`\`
 `;
 
 function buildIngestPrompt({ indexMd, entityTitles, filename, ext, rawText }) {
@@ -239,6 +256,7 @@ export async function ingestDocument(kbName, file, config, onProgress) {
   operations.push({ type: 'log', entry: `ingest | ${filename} — ${result.logEntry}` });
 
   // 6. Write transactionally
+  console.log(`[Ingest] Writing ${operations.length} operations: ${operations.map((o) => (o.type === 'page' ? `${o.pageType}/${o.title}` : o.type)).join(', ')}`);
   await batchWriteWikiPages(kbName, operations);
 
   // 7. Maintain backlinks
