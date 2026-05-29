@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../store.jsx';
+import { saveSynthesisPage } from '../../lib/wikiStore.js';
 
 export default function NoteBlockComposer() {
   const { state, dispatch } = useStore();
+  const [filedIds, setFiledIds] = useState(new Set());
+  const [fileDialog, setFileDialog] = useState(null);
 
   function moveBlock(index, direction) {
     const to = index + direction;
@@ -25,6 +28,32 @@ export default function NoteBlockComposer() {
     a.download = 'draft.md';
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function openFileDialog(block) {
+    const activeKbs = state.activatedBases.filter((b) => b.activated).map((b) => b.kbName);
+    setFileDialog({
+      block,
+      targetKb: activeKbs[0] || '',
+      title: `Analysis: ${block.id}`,
+    });
+  }
+
+  async function handleFileBlock() {
+    if (!fileDialog || !fileDialog.targetKb || !fileDialog.title) return;
+    try {
+      await saveSynthesisPage(fileDialog.targetKb, {
+        title: fileDialog.title,
+        query: state.tip || 'Investigation analysis',
+        analysis: fileDialog.block.paragraph,
+        evidence: fileDialog.block.citations.map((c) => ({ kb: c.source, passage: c.passage })),
+        citations: fileDialog.block.citations,
+      });
+      setFiledIds((prev) => new Set(prev).add(fileDialog.block.id));
+      setFileDialog(null);
+    } catch (err) {
+      alert(`Failed to file: ${err.message}`);
+    }
   }
 
   if (state.loading || !state.graph.nodes || state.graph.nodes.length === 0) {
@@ -51,10 +80,16 @@ export default function NoteBlockComposer() {
               <span key={i} style={{ marginRight: 8 }}>[{c.source}]</span>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <button onClick={() => moveBlock(idx, -1)} disabled={idx === 0} style={{ fontSize: 10, padding: '2px 6px' }}>↑</button>
             <button onClick={() => moveBlock(idx, 1)} disabled={idx === state.noteBlocks.length - 1} style={{ fontSize: 10, padding: '2px 6px' }}>↓</button>
             <button onClick={() => deleteBlock(idx)} style={{ fontSize: 10, padding: '2px 6px', color: '#ef4444' }}>Delete</button>
+            {!filedIds.has(block.id) && (
+              <button onClick={() => openFileDialog(block)} style={{ fontSize: 10, padding: '2px 6px' }}>File to Wiki</button>
+            )}
+            {filedIds.has(block.id) && (
+              <span style={{ fontSize: 10, color: '#22c55e', marginLeft: 4 }}>✓ Filed</span>
+            )}
           </div>
         </div>
       ))}
@@ -62,6 +97,30 @@ export default function NoteBlockComposer() {
         <button onClick={exportMarkdown} style={{ padding: '6px 12px', fontSize: 12 }}>
           Export as Markdown
         </button>
+      )}
+
+      {fileDialog && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', padding: 16, borderRadius: 6, width: 320 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 10 }}>File Block to Wiki</div>
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>Target KB</label>
+              <select value={fileDialog.targetKb} onChange={(e) => setFileDialog({ ...fileDialog, targetKb: e.target.value })} style={{ fontSize: 12, padding: 4, width: '100%' }}>
+                {state.activatedBases.filter((b) => b.activated).map((b) => (
+                  <option key={b.kbName} value={b.kbName}>{b.kbName}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>Title</label>
+              <input value={fileDialog.title} onChange={(e) => setFileDialog({ ...fileDialog, title: e.target.value })} style={{ fontSize: 12, padding: 4, width: '100%' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleFileBlock} style={{ fontSize: 12, padding: '4px 10px' }}>Confirm</button>
+              <button onClick={() => setFileDialog(null)} style={{ fontSize: 12, padding: '4px 10px' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

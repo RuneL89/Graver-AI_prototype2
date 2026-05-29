@@ -3,11 +3,12 @@ import { useStore } from '../store.jsx';
 import { ingestDocument } from '../../lib/ingest.js';
 
 export default function DocumentUploader() {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const [kb, setKb] = useState('');
   const [dragOver, setDragOver] = useState(false);
-  const [status, setStatus] = useState('');
+  const [localStatus, setLocalStatus] = useState('');
   const kbs = state.knowledgeBases;
+  const ingestion = state.ingestion;
 
   useEffect(() => {
     if (kbs.length > 0 && !kb) {
@@ -15,21 +16,56 @@ export default function DocumentUploader() {
     }
   }, [kbs]);
 
+  function validateConfig() {
+    const { apiBaseUrl, modelName } = state.config || {};
+    if (!apiBaseUrl || !modelName) {
+      return 'Please configure LLM API in Settings before uploading documents.';
+    }
+    if (apiBaseUrl && !apiBaseUrl.startsWith('https://')) {
+      return 'LLM API URL must be a valid HTTPS endpoint.';
+    }
+    return null;
+  }
+
+  function getProgressMessage() {
+    switch (ingestion.status) {
+      case 'extracting':
+        return `Extracting text from ${ingestion.fileName}…`;
+      case 'analyzing':
+        return `Analyzing with LLM…`;
+      case 'writing':
+        return 'Updating wiki pages…';
+      case 'done':
+        return 'Ingest complete';
+      case 'error':
+        return `Error: ${ingestion.error}`;
+      default:
+        return localStatus;
+    }
+  }
+
   async function handleFiles(files) {
     if (!kb) {
-      setStatus('Please select a knowledge base first');
+      setLocalStatus('Please select a knowledge base first');
       return;
     }
-    setStatus(`Ingesting ${files.length} file(s)...`);
+    const configError = validateConfig();
+    if (configError) {
+      setLocalStatus(configError);
+      return;
+    }
+
     for (const file of files) {
+      dispatch({ type: 'INGEST_START', payload: { fileName: file.name, kbName: kb } });
       try {
-        await ingestDocument(kb, file);
+        await ingestDocument(kb, file, state.config, (status, ...args) => {
+          dispatch({ type: 'INGEST_PROGRESS', payload: { status } });
+        });
+        dispatch({ type: 'INGEST_COMPLETE' });
       } catch (err) {
-        setStatus(`Error ingesting ${file.name}: ${err.message}`);
-        return;
+        dispatch({ type: 'INGEST_ERROR', payload: { error: err.message } });
       }
     }
-    setStatus('Ingest complete');
   }
 
   function onDrop(e) {
@@ -43,6 +79,9 @@ export default function DocumentUploader() {
     const files = Array.from(e.target.files);
     handleFiles(files);
   }
+
+  const isIngesting = ingestion.status === 'extracting' || ingestion.status === 'analyzing' || ingestion.status === 'writing';
+  const statusMessage = getProgressMessage();
 
   return (
     <div style={{ padding: 12, borderBottom: '1px solid #eee', fontSize: 13 }}>
@@ -63,15 +102,24 @@ export default function DocumentUploader() {
           padding: 16,
           textAlign: 'center',
           background: dragOver ? '#eff6ff' : '#fafafa',
-          cursor: 'pointer',
+          cursor: isIngesting ? 'not-allowed' : 'pointer',
+          opacity: isIngesting ? 0.6 : 1,
         }}
-        onClick={() => document.getElementById('file-input')?.click()}
+        onClick={() => {
+          if (!isIngesting) document.getElementById('file-input')?.click();
+        }}
       >
-        <div style={{ fontSize: 12, color: '#666' }}>Drop files here or click to upload</div>
+        <div style={{ fontSize: 12, color: '#666' }}>
+          {isIngesting ? 'Ingestion in progress…' : 'Drop files here or click to upload'}
+        </div>
         <div style={{ fontSize: 10, color: '#999', marginTop: 4 }}>PDF, TXT, MD, CSV, JSON</div>
       </div>
-      <input id="file-input" type="file" multiple style={{ display: 'none' }} onChange={onChange} />
-      {status && <div style={{ fontSize: 11, marginTop: 8, color: '#333' }}>{status}</div>}
+      <input id="file-input" type="file" multiple style={{ display: 'none' }} onChange={onChange} disabled={isIngesting} />
+      {statusMessage && (
+        <div style={{ fontSize: 11, marginTop: 8, color: ingestion.status === 'error' ? '#ef4444' : '#333' }}>
+          {statusMessage}
+        </div>
+      )}
     </div>
   );
 }

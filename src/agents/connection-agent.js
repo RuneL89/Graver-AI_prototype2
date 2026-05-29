@@ -1,4 +1,5 @@
 import { LLMClient } from '../shared/llm-client.js';
+import { buildAgentSystemPrompt } from '../shared/schema-loader.js';
 
 export async function buildGraph(bundles, config) {
   const client = new LLMClient(config);
@@ -43,15 +44,17 @@ export async function buildGraph(bundles, config) {
     }
   }
 
+  const kbNames = [...new Set(bundles.map((b) => b.kbName))];
+
   try {
+    const systemPrompt = await buildAgentSystemPrompt(
+      kbNames,
+      'You detect alias matches across sources. Return only JSON.'
+    );
     const prompt = `Given these entities from multiple knowledge bases:\n${nodeList
       .map((n) => `- ${n.label} (${n.sources.join(', ')})`)
       .join('\n')}\n\nReturn ONLY a JSON array of possible alias matches:\n[\n  { "names": ["Name A", "Name B"], "reason": "..." }\n]`;
-    const raw = await client.sendMessage(
-      'You detect alias matches across sources. Return only JSON.',
-      prompt,
-      0.2
-    );
+    const raw = await client.sendMessage(systemPrompt, prompt, 0.2);
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

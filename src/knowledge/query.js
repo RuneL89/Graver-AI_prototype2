@@ -1,7 +1,9 @@
 import { readWikiIndex, loadWikiPage } from '../lib/wikiStore.js';
+import { parseIndex } from './wiki-page.js';
 
 export async function queryWiki(kbName, question) {
-  const index = await readWikiIndex(kbName);
+  const indexMd = await readWikiIndex(kbName);
+  const index = parseIndex(indexMd);
   const relevantPages = [];
   const q = question.toLowerCase();
 

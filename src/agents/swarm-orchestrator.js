@@ -1,5 +1,6 @@
 import { LLMClient } from '../shared/llm-client.js';
 import { readWikiIndex, listWikiPages, loadWikiPage } from '../lib/wikiStore.js';
+import { buildAgentSystemPrompt } from '../shared/schema-loader.js';
 
 export async function runSwarm(tip, activatedBases, config) {
   const promises = activatedBases.map((base) =>
@@ -15,14 +16,7 @@ async function researchAgent(tip, kbName, config) {
 
   const tipWords = tip.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
 
-  const indexSections = await readWikiIndex(kbName);
-  let indexContent = '';
-  for (const [section, items] of Object.entries(indexSections)) {
-    indexContent += `## ${section}\n`;
-    for (const item of items) {
-      indexContent += `- ${item.title}${item.summary ? ` — ${item.summary}` : ''}\n`;
-    }
-  }
+  const indexContent = await readWikiIndex(kbName);
 
   const entityNames = await listWikiPages(kbName, 'entity');
   const passages = [];
@@ -47,12 +41,12 @@ async function researchAgent(tip, kbName, config) {
   }
 
   try {
-    const prompt = `Tip: "${tip}"\n\nKnowledge Base: ${kbName}\nIndex:\n${indexContent}\n\nEntity pages:\n${passages.map((p) => p.text.slice(0, 300)).join('\n---\n')}\n\nReturn a JSON object:\n{\n  "relevantPassages": ["..."],\n  "relevantEntities": ["..."]\n}`;
-    const raw = await client.sendMessage(
-      'You search a wiki for evidence related to an investigative tip. Return only JSON.',
-      prompt,
-      0.2
+    const systemPrompt = await buildAgentSystemPrompt(
+      kbName,
+      'You search a wiki for evidence related to an investigative tip. Return only JSON.'
     );
+    const prompt = `Tip: "${tip}"\n\nKnowledge Base: ${kbName}\nIndex:\n${indexContent}\n\nEntity pages:\n${passages.map((p) => p.text.slice(0, 300)).join('\n---\n')}\n\nReturn a JSON object:\n{\n  "relevantPassages": ["..."],\n  "relevantEntities": ["..."]\n}`;
+    const raw = await client.sendMessage(systemPrompt, prompt, 0.2);
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);

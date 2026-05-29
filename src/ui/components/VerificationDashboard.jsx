@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { verifyBlock } from '../../agents/verification-agent.js';
+import { saveSynthesisPage } from '../../lib/wikiStore.js';
 
 export default function VerificationDashboard() {
   const { state, dispatch } = useStore();
   const [verifying, setVerifying] = useState(false);
+  const [fileDialogOpen, setFileDialogOpen] = useState(false);
+  const [fileTargetKb, setFileTargetKb] = useState('');
+  const [fileTitle, setFileTitle] = useState('');
+  const [fileSuccess, setFileSuccess] = useState('');
+  const [fileError, setFileError] = useState('');
 
   async function handleVerify() {
     if (!state.pendingBlock) return;
@@ -32,6 +38,32 @@ export default function VerificationDashboard() {
 
   function rejectBlock() {
     dispatch({ type: 'CLEAR_PENDING_BLOCK' });
+  }
+
+  function openFileDialog() {
+    const activeKbs = state.activatedBases.filter((b) => b.activated).map((b) => b.kbName);
+    setFileTargetKb(activeKbs[0] || '');
+    setFileTitle(state.pendingBlock.suggestedTitle || `Connection: ${state.selectedConnection || 'analysis'}`);
+    setFileSuccess('');
+    setFileError('');
+    setFileDialogOpen(true);
+  }
+
+  async function handleFileToWiki() {
+    if (!fileTargetKb || !fileTitle) return;
+    try {
+      await saveSynthesisPage(fileTargetKb, {
+        title: fileTitle,
+        query: state.tip || 'Investigation analysis',
+        analysis: state.pendingBlock.paragraph,
+        evidence: state.pendingBlock.citations.map((c) => ({ kb: c.source, passage: c.passage })),
+        citations: state.pendingBlock.citations,
+      });
+      setFileSuccess(`Filed to wiki as [[${fileTitle}]]`);
+      setFileDialogOpen(false);
+    } catch (err) {
+      setFileError(err.message);
+    }
   }
 
   if (!state.pendingBlock) {
@@ -69,14 +101,17 @@ export default function VerificationDashboard() {
         </span>
         {reason && <span style={{ color: '#666', fontSize: 11 }}>{reason}</span>}
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {!state.pendingBlock.verification && (
           <button onClick={handleVerify} disabled={verifying} style={{ padding: '4px 12px', fontSize: 12 }}>
             {verifying ? 'Verifying…' : 'Verify'}
           </button>
         )}
         {status === 'VERIFIED' && (
-          <button onClick={acceptBlock} style={{ padding: '4px 12px', fontSize: 12 }}>Accept into Composer</button>
+          <>
+            <button onClick={acceptBlock} style={{ padding: '4px 12px', fontSize: 12 }}>Accept into Composer</button>
+            <button onClick={openFileDialog} style={{ padding: '4px 12px', fontSize: 12 }}>File to Wiki</button>
+          </>
         )}
         {status === 'FLAGGED' && (
           <button onClick={rejectBlock} style={{ padding: '4px 12px', fontSize: 12 }}>Reject</button>
@@ -85,6 +120,30 @@ export default function VerificationDashboard() {
           <button onClick={rejectBlock} style={{ padding: '4px 12px', fontSize: 12 }}>Discard</button>
         )}
       </div>
+      {fileSuccess && <div style={{ fontSize: 11, marginTop: 8, color: '#22c55e' }}>{fileSuccess}</div>}
+
+      {fileDialogOpen && (
+        <div style={{ marginTop: 12, padding: 10, border: '1px solid #ddd', borderRadius: 4, background: '#fff' }}>
+          <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 8 }}>File to Wiki</div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>Target KB</label>
+            <select value={fileTargetKb} onChange={(e) => setFileTargetKb(e.target.value)} style={{ fontSize: 12, padding: 4, width: '100%' }}>
+              {state.activatedBases.filter((b) => b.activated).map((b) => (
+                <option key={b.kbName} value={b.kbName}>{b.kbName}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>Title</label>
+            <input value={fileTitle} onChange={(e) => setFileTitle(e.target.value)} style={{ fontSize: 12, padding: 4, width: '100%' }} />
+          </div>
+          {fileError && <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 8 }}>{fileError}</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handleFileToWiki} style={{ fontSize: 11, padding: '4px 10px' }}>Confirm</button>
+            <button onClick={() => setFileDialogOpen(false)} style={{ fontSize: 11, padding: '4px 10px' }}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

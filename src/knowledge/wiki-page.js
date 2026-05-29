@@ -82,7 +82,7 @@ export function parseIndex(text) {
     else if (line.startsWith('## Sources')) current = 'sources';
     else if (line.startsWith('## Synthesis')) current = 'synthesis';
     else if (current && line.trim().startsWith('- ')) {
-      const match = line.match(/- (?:\[\[)?([^\]]+)(?:\]\])?\s*(?:[–-]\s*(.*))?/);
+      const match = line.match(/- (?:\[\[)?([^\]]+)(?:\]\])?\s*(?:[-–—]\s*(.*))?/);
       if (match) {
         sections[current].push({ title: match[1].trim(), summary: (match[2] || '').trim() });
       }
@@ -91,6 +91,6 @@ export function parseIndex(text) {
   return sections;
 }
 
-export async function updateIndex(kbName, sections) {
-  await updateWikiIndex(kbName, sections);
+export async function updateIndex(kbName, markdown) {
+  await updateWikiIndex(kbName, markdown);
 }

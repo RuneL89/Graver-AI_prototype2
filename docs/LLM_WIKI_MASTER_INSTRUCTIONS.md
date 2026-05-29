@@ -16,10 +16,12 @@ Every knowledge base consists of three immutable or versioned layers:
 2. **Compiled Wiki Layer** (`/data/kb-{name}/wiki/`)
    - LLM-maintained markdown files that compound over time.
    - Contains entity pages, concept pages, synthesis pages, index.md, and log.md.
-   - Created and updated by the coding agent, not the journalist-facing UI.
+   - At runtime, these are stored as **markdown strings in IndexedDB**, not files on disk.
+   - Created and updated by agents (ingest, writing, question-router, lint), not the journalist-facing UI.
 
 3. **Schema** (`/data/kb-{name}/schema.md`)
    - Per-knowledge-base conventions governing page types, ingest rules, query behavior, citation format, and verification thresholds.
+   - Injected into every agent prompt that touches the wiki.
 
 ---
 
@@ -40,7 +42,7 @@ A new wiki directory (`/data/kb-{name}/wiki/`) is created when a new domain-spec
 Steps:
 1. Create `/data/kb-{name}/raw/` and add source documents.
 2. Write `/data/kb-{name}/schema.md` tailored to the domain.
-3. Run `npm run ingest --kb=kb-{name} --source=raw/filename.ext`.
+3. At runtime, use the Document Uploader to ingest sources. The LLM processes them and writes pages.
 4. Update `/data/kb-registry/index.md` with the new base entry.
 
 ---
@@ -49,11 +51,12 @@ Steps:
 
 A wiki is updated in the following situations:
 
-- **New raw sources added:** Run Ingest on the new source.
+- **New raw sources added:** Run Ingest on the new source via Document Uploader.
+- **Investigation answers filed:** Use "File to Wiki" or "Save Answer to Wiki" to create synthesis pages.
 - **Contradictions discovered during Lint:** Resolve contradictions by updating affected pages, adding contradiction registers, and sourcing the conflict.
 - **Schema evolution:** Update `schema.md`, then run Lint to identify pages needing alignment.
 
-**Important:** Updates are performed by the coding agent, not at runtime by the UI.
+**Important:** Wiki writes are performed by agents or coding-agent scripts, not directly by the journalist-facing UI (except for schema edits behind an "Edit" toggle).
 
 ---
 
@@ -71,15 +74,16 @@ A wiki is updated in the following situations:
 
 ### 5.3 Source Summaries
 - One page per raw document summarizing its key contents.
-- Stored in `/wiki/sources/` or referenced from entity pages.
+- Stored in `/wiki/sources/`.
 
 ### 5.4 Synthesis Pages
-- Generated analysis combining multiple sources.
+- Generated analysis combining multiple sources or investigation answers.
 - Stored in `/wiki/synthesis/`.
+- Include: original question, analysis paragraph, evidence, key entities, citations.
 
 ### 5.5 Special Files
-- **`index.md`:** Content catalog. Categorized list of all pages with one-line summaries and wikilinks.
-- **`log.md`:** Append-only chronological record of all ingests, queries, and lint passes.
+- **`index.md`:** Content catalog. Categorized list of all pages with **descriptive one-line summaries** and wikilinks. This is the primary interface for the Relevance Scoring Agent and Question Router.
+- **`log.md`:** Append-only chronological record of all ingests, queries, lint passes, and writeback actions.
 
 ---
 
@@ -88,6 +92,7 @@ A wiki is updated in the following situations:
 - All inter-page links use `[[wikilink]]` syntax.
 - Every entity page must have a **Connections** section with bidirectional links.
 - When page A links to page B, page B should also link back to page A.
+- Backlinks are maintained automatically by `maintainBacklinks()` after every page write.
 
 ---
 
@@ -108,16 +113,21 @@ Additional fields are permitted per schema.
 
 ---
 
-## 8. Ingest Workflow
+## 8. Ingest Workflow (LLM-Driven)
 
 1. **Read raw source** (text, CSV, JSON, or parsed PDF).
-2. **Discuss key takeaways** (internally or via LLM prompt).
-3. **Write source summary** page.
-4. **Update `index.md`** with new page entries.
-5. **Update all relevant entity and concept pages**, adding cross-references.
-6. **Append operation entry to `log.md`.**
+2. **Read schema and current index.md** from IndexedDB.
+3. **Read existing entity titles** to avoid duplicates.
+4. **Send LLM prompt** with schema, index, existing entities, and raw text.
+5. **LLM returns structured JSON:** source summary, entity pages, concept pages, updated index, log entry.
+6. **Validate JSON** and build write operations.
+7. **Write transactionally** via `batchWriteWikiPages`.
+8. **Maintain backlinks** for all `[[wikilink]]` references.
+9. **Update React store** and show completion.
 
-One source may touch 10–15 wiki pages.
+For large documents (>30,000 chars), the text is split into chunks with overlap and processed sequentially.
+
+**Token cost:** Ingestion typically costs ~2K–10K tokens depending on document size. Cost is logged to the console.
 
 ---
 
@@ -127,27 +137,74 @@ One source may touch 10–15 wiki pages.
 2. **Read identified pages** (entity, concept, source summaries).
 3. **Synthesize answer** with `[[wikilink]]` citations.
 4. Return structured response to the calling agent.
+5. **Optional writeback:** The journalist can file the answer as a synthesis page, updating the index and log.
 
 ---
 
-## 10. Lint Workflow
+## 10. Lint Workflow (Semantic)
 
-Run `npm run lint --kb=kb-{name}` to scan for:
+1. **Read schema, index.md, sample pages, and recent log** from IndexedDB.
+2. **Send semantic lint prompt** to the LLM.
+3. **LLM returns structured JSON** with contradictions, stale claims, orphans, missing concepts, data gaps, broken links, and suggestions.
+4. **Display color-coded report** in WikiManager (red/yellow/blue).
+5. **Append summary to log.md**.
 
-- **Contradictions:** Conflicting claims between pages or sources.
-- **Stale claims:** Information that may be outdated based on newer sources.
-- **Orphan pages:** Pages with no incoming wikilinks.
-- **Missing concept pages:** Entities that reference concepts without corresponding concept pages.
-- **Data gaps:** Entities mentioned in sources but lacking entity pages.
+If no LLM is configured, structural lint (orphans, broken links, schema validation) runs as a fallback.
 
-Output: A human-readable report suggesting fixes or new sources.
+**Token cost:** Lint typically costs ~3K–8K tokens depending on wiki size. Cost is logged to the console.
+
+---
+
+## 11. Schema Injection
+
+Every agent that interacts with a KB receives the schema as a prefix to its system prompt:
+
+```js
+const systemPrompt = await buildAgentSystemPrompt(
+  kbName,
+  'You search a wiki for evidence related to an investigative tip. Return only JSON.'
+);
+```
+
+This ensures agents follow domain-specific rules for page types, citations, and verification thresholds.
+
+---
+
+## 12. Bidirectional Link Maintenance
+
+After any page write (ingest or writeback), `maintainBacklinks(kbName, sourceTitle, targetTitles)`:
+
+1. Scans the source page for `[[Title]]` links.
+2. For each target, loads the target page.
+3. If the target's Connections section does not already reference the source, appends it.
+4. Saves the updated target page.
+
+This keeps the wiki graph fully navigable in both directions.
+
+---
+
+## 13. Token Cost Transparency
+
+All LLM-driven operations log estimated token usage:
+
+```
+[Ingest] Prompt length: 4500 chars (~1125 tokens estimated)
+[LintAgent] Prompt length: 8200 chars (~2050 tokens estimated)
+```
+
+Journalists should be aware that uploading documents and running lint now costs money.
 
 ---
 
 ## Appendix: Adaptations from Karpathy's LLM Wiki
 
+- **Storage:** Markdown strings in IndexedDB instead of files on disk.
 - **Multiple wikis:** One per knowledge base rather than a single personal wiki.
-- **Per-base schema:** Each domain has its own `schema.md`.
+- **Per-base schema:** Each domain has its own `schema.md`, injected into every agent prompt.
+- **LLM-driven ingest:** Documents are processed by the LLM, not regex heuristics.
+- **Writeback:** Investigation answers compound the wiki as synthesis pages.
+- **Semantic lint:** The LLM health-checks for contradictions and stale claims, not just structural issues.
+- **Bidirectional links:** Backlinks are maintained automatically after every write.
 - **Parallel swarm query:** Agents query multiple wikis simultaneously.
 - **Connection Agent:** Cross-wiki synthesis layer not present in the original pattern.
 - **Verification Agent:** Domain-specific lint pass on journalist-facing output.

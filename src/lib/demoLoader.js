@@ -1,5 +1,6 @@
 import { createKnowledgeBase, saveWikiPage, updateWikiIndex, appendWikiLog } from './wikiStore.js';
 import { storeRawSource } from './rawVault.js';
+import { validateSchema } from '../shared/schema-loader.js';
 
 export async function loadDemoData(kbName) {
   const res = await fetch(`./demo-data/${kbName}.json`);
@@ -8,18 +9,25 @@ export async function loadDemoData(kbName) {
 
   await createKnowledgeBase(kbName, bundle.schemaText);
 
+  const validation = validateSchema(bundle.schemaText || '');
+  if (!validation.valid) {
+    console.warn(`[demoLoader] Demo schema for ${kbName} missing sections: ${validation.missing.join(', ')}`);
+  }
+
   for (const page of bundle.pages) {
     await saveWikiPage(kbName, page.type, page.title, page.content);
   }
 
-  const sections = { entities: [], concepts: [], sources: [], synthesis: [] };
-  for (const page of bundle.pages) {
-    const section = page.type + 's';
-    if (sections[section]) {
-      sections[section].push({ title: page.title, summary: '' });
+  // Build markdown index string from pages array
+  let indexMd = `# ${kbName}\n`;
+  for (const section of ['entities', 'concepts', 'sources', 'synthesis']) {
+    indexMd += `\n## ${section.charAt(0).toUpperCase() + section.slice(1)}\n`;
+    const items = bundle.pages.filter((p) => p.type + 's' === section);
+    for (const item of items) {
+      indexMd += `- [[${item.title}]]\n`;
     }
   }
-  await updateWikiIndex(kbName, sections);
+  await updateWikiIndex(kbName, indexMd);
 
   await appendWikiLog(kbName, 'Demo data loaded');
 

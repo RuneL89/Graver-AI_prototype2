@@ -1,5 +1,6 @@
 import { LLMClient } from '../shared/llm-client.js';
 import { readWikiIndex } from '../lib/wikiStore.js';
+import { buildAgentSystemPrompt } from '../shared/schema-loader.js';
 
 export async function relevanceScore(tip, kbList, config) {
   const client = new LLMClient(config);
@@ -9,23 +10,16 @@ export async function relevanceScore(tip, kbList, config) {
   const tipWords = tip.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
 
   for (const kb of kbList) {
-    const indexSections = await readWikiIndex(kb);
-    let indexContent = '';
-    for (const [section, items] of Object.entries(indexSections)) {
-      indexContent += `## ${section}\n`;
-      for (const item of items) {
-        indexContent += `- ${item.title}${item.summary ? ` — ${item.summary}` : ''}\n`;
-      }
-    }
+    const indexContent = await readWikiIndex(kb);
 
     let result;
     try {
-      const prompt = `You are a relevance scoring agent.\n\nTip: "${tip}"\n\nKnowledge Base: ${kb}\nIndex Content:\n${indexContent}\n\nReturn ONLY a JSON object with this exact shape:\n{\n  "score": 0.0 to 1.0,\n  "justification": "one sentence"\n}\n`;
-      const raw = await client.sendMessage(
-        'You score investigative tips against knowledge bases. Return only JSON.',
-        prompt,
-        0.2
+      const systemPrompt = await buildAgentSystemPrompt(
+        kb,
+        'You score investigative tips against knowledge bases. Return only JSON.'
       );
+      const prompt = `You are a relevance scoring agent.\n\nTip: "${tip}"\n\nKnowledge Base: ${kb}\nIndex Content:\n${indexContent}\n\nReturn ONLY a JSON object with this exact shape:\n{\n  "score": 0.0 to 1.0,\n  "justification": "one sentence"\n}\n`;
+      const raw = await client.sendMessage(systemPrompt, prompt, 0.2);
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       result = jsonMatch ? JSON.parse(jsonMatch[0]) : { score: 0.5, justification: 'Fallback' };
     } catch {

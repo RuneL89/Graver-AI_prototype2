@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { marked } from 'marked';
 import { readWikiIndex, loadWikiPage } from '../../lib/wikiStore.js';
+import { parseIndex } from '../../knowledge/wiki-page.js';
 
 const SECTIONS = [
   { key: 'entities', label: 'Entities', pageType: 'entity' },
@@ -19,20 +20,21 @@ export default function WikiViewer({ kbName, onClose }) {
   useEffect(() => {
     mountedRef.current = true;
     async function init() {
-      const idx = await readWikiIndex(kbName);
+      const indexMd = await readWikiIndex(kbName);
       if (!mountedRef.current) return;
-      setIndex(idx);
+      const parsed = parseIndex(indexMd);
+      setIndex(parsed);
 
       const map = new Map();
       for (const section of SECTIONS) {
-        for (const item of (idx[section.key] || [])) {
+        for (const item of (parsed[section.key] || [])) {
           map.set(item.title, section.pageType);
         }
       }
       setTitleMap(map);
 
       for (const section of SECTIONS) {
-        const items = idx[section.key] || [];
+        const items = parsed[section.key] || [];
         if (items.length > 0) {
           await showPage(items[0].title, map);
           break;
