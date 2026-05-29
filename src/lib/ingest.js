@@ -32,33 +32,39 @@ Please process this source and integrate it into the wiki. Return ONLY a JSON ob
 }}
 
 Rules:
-- Update existing entity pages if the source adds new information.
-- Create new entity pages for entities not already in the wiki.
-- Update the Connections section with bidirectional [[wikilink]] references.
-- Note contradictions in the Contradictions section if the source conflicts with existing wiki content.
-- The sourcePage should be a genuine summary, not a raw text dump.
-- Do not exceed 10 entityPages per ingest to control token cost.
-- CRITICAL: Every entry in updatedIndex must have a descriptive one-line summary 
-  after the em-dash. The Relevance Scoring Agent reads only the index to decide 
-  which wikis are relevant to a journalist's tip. Vague or missing summaries 
-  directly degrade the accuracy of relevance scoring.
-- updatedIndex entries MUST use markdown bullet lists: \`- [[Title]] — summary\`.
-  Do NOT omit the \`- \` prefix. Example format:
+- A single rich source may generate 10-20 pages (entities + concepts combined). Do not artificially limit coverage.
+- Update existing entity/concept pages by merging new facts. Do not overwrite entire pages.
+- Create new entity pages for every significant person, company, contract, or address mentioned.
+- Create new concept pages for EVERY major idea, domain term, or pattern mentioned (e.g. procurement thresholds, beneficial ownership, sanctions evasion).
+- Every page MUST use this structure:
+  ## Summary — 1-2 sentences.
+  ## Details — Main content with clear headings and short paragraphs.
+  ## Related pages — Forward links to other wiki pages.
+  ## Connections — Backlinks from other pages (only list ones that already exist).
+  ## Sources — List of raw sources this page draws from.
+  ## Contradictions — Only if applicable.
+- Every factual claim in Details must cite its source inline using (source: {filename}).
+- If two sources disagree, note the contradiction explicitly in the Contradictions section.
+- The sourcePage must be a structured summary: (1) what the document is, (2) key facts extracted, (3) entities mentioned, (4) open questions or gaps. Do NOT paste raw extracted text.
+- Use [[wiki-links]] liberally throughout all page content to connect related ideas.
+- CRITICAL: Every entry in updatedIndex must have a descriptive one-line summary after the em-dash.
+- updatedIndex entries MUST use markdown bullet lists: \`- [[Title]] — summary\`. Do NOT omit the \`- \` prefix.
 
-  \`\`\`
-  # {kbName}
+Example index format:
+\`\`\`
+# {kbName}
 
-  ## Entities
-  - [[Entity Name]] — brief description
+## Entities
+- [[Entity Name]] — brief description
 
-  ## Concepts
-  - [[Concept Name]] — brief description
+## Concepts
+- [[Concept Name]] — brief description
 
-  ## Sources
-  - [[Source Title]] — summary of coverage
+## Sources
+- [[Source Title]] — summary of coverage
 
-  ## Synthesis
-  \`\`\`
+## Synthesis
+\`\`\`
 `;
 
 function buildIngestPrompt({ indexMd, entityTitles, filename, ext, rawText }) {
