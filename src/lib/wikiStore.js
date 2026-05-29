@@ -1,4 +1,4 @@
-import { dbSet, dbGet, dbDelete, dbKeys } from './db.js';
+import { dbSet, dbGet, dbDelete, dbKeys, dbAllKeys } from './db.js';
 
 export async function loadWikiPage(kbName, pageType, title) {
   return dbGet(`wiki.${kbName}.pages`, `${pageType}/${title}`);
@@ -44,7 +44,7 @@ export async function appendWikiLog(kbName, entry) {
 }
 
 export async function listKnowledgeBases() {
-  const keys = await dbKeys('wiki');
+  const keys = await dbAllKeys();
   const set = new Set();
   for (const k of keys) {
     const match = k.match(/^wiki\.([^.]+)\./);

@@ -68,6 +68,17 @@ export async function dbKeys(namespace) {
   });
 }
 
+export async function dbAllKeys() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('store', 'readonly');
+    const store = tx.objectStore('store');
+    const req = store.getAllKeys();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export async function dbClear(namespace) {
   const keys = await dbKeys(namespace);
   for (const key of keys) {
