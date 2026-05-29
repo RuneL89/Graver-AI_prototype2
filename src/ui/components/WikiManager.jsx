@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useStore } from '../store.jsx';
 import { listKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, readWikiIndex, getSchema, setSchema, appendWikiLog } from '../../lib/wikiStore.js';
 import { lintWiki } from '../../lib/lint.js';
 
 export default function WikiManager() {
-  const [kbs, setKbs] = useState([]);
+  const { state, dispatch } = useStore();
+  const kbs = state.knowledgeBases;
   const [newName, setNewName] = useState('');
   const [newSchema, setNewSchema] = useState('');
   const [selected, setSelected] = useState(null);
@@ -13,7 +15,7 @@ export default function WikiManager() {
 
   async function refresh() {
     const list = await listKnowledgeBases();
-    setKbs(list);
+    dispatch({ type: 'SET_KNOWLEDGE_BASES', payload: list });
   }
 
   useEffect(() => {

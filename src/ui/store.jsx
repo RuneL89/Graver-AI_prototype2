@@ -5,6 +5,7 @@ const initialState = {
   tip: '',
   loading: false,
   activatedBases: [],
+  knowledgeBases: [],
   graph: { nodes: [], edges: [], aliases: [] },
   noteBlocks: [],
   pendingBlock: null,
@@ -22,6 +23,8 @@ function reducer(state, action) {
       return { ...state, loading: action.payload };
     case 'SET_ACTIVATED_BASES':
       return { ...state, activatedBases: action.payload };
+    case 'SET_KNOWLEDGE_BASES':
+      return { ...state, knowledgeBases: action.payload };
     case 'SET_GRAPH':
       return { ...state, graph: action.payload };
     case 'ADD_NOTE_BLOCK':

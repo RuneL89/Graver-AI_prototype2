@@ -1,22 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useStore } from '../store.jsx';
 import { ingestDocument } from '../../lib/ingest.js';
-import { listKnowledgeBases } from '../../lib/wikiStore.js';
 
 export default function DocumentUploader() {
+  const { state } = useStore();
   const [kb, setKb] = useState('');
-  const [kbs, setKbs] = useState([]);
   const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState('');
+  const kbs = state.knowledgeBases;
 
-  async function refreshKbs() {
-    const list = await listKnowledgeBases();
-    setKbs(list);
-    if (list.length > 0 && !kb) setKb(list[0]);
-  }
-
-  React.useEffect(() => {
-    refreshKbs();
-  }, []);
+  useEffect(() => {
+    if (kbs.length > 0 && !kb) {
+      setKb(kbs[0]);
+    }
+  }, [kbs]);
 
   async function handleFiles(files) {
     if (!kb) {
