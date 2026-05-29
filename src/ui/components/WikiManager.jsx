@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store.jsx';
-import { listKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, readWikiIndex, getSchema, setSchema, appendWikiLog } from '../../lib/wikiStore.js';
+import { listKnowledgeBases, deleteKnowledgeBase, readWikiIndex, getSchema, setSchema, appendWikiLog } from '../../lib/wikiStore.js';
 import { lintWiki } from '../../lib/lint.js';
 import { parseIndex } from '../../knowledge/wiki-page.js';
 import { validateSchema } from '../../shared/schema-loader.js';
@@ -77,8 +77,7 @@ function LintReportView({ report }) {
 export default function WikiManager({ onOpenViewer }) {
   const { state, dispatch } = useStore();
   const kbs = state.knowledgeBases;
-  const [newName, setNewName] = useState('');
-  const [newSchema, setNewSchema] = useState('');
+
   const [selected, setSelected] = useState(null);
   const [index, setIndex] = useState(null);
   const [schema, setSchemaText] = useState('');
@@ -94,18 +93,7 @@ export default function WikiManager({ onOpenViewer }) {
     refresh();
   }, []);
 
-  async function handleCreate(e) {
-    e.preventDefault();
-    if (!newName) return;
-    await createKnowledgeBase(newName, newSchema);
-    const validation = validateSchema(newSchema || '');
-    if (!validation.valid) {
-      console.warn(`[WikiManager] New KB ${newName} schema missing sections: ${validation.missing.join(', ')}`);
-    }
-    setNewName('');
-    setNewSchema('');
-    refresh();
-  }
+
 
   async function handleDelete(kbName) {
     if (!window.confirm(`Delete ${kbName}?`)) return;
@@ -124,12 +112,7 @@ export default function WikiManager({ onOpenViewer }) {
     setEditSchema(false);
   }
 
-  // Auto-refresh selected KB when ingestion completes
-  useEffect(() => {
-    if (state.ingestion?.status === 'done' && selected) {
-      selectKb(selected);
-    }
-  }, [state.ingestion?.status, selected]);
+
 
   async function saveSchema() {
     await setSchema(selected, schema);
@@ -157,15 +140,7 @@ export default function WikiManager({ onOpenViewer }) {
           </div>
         ))}
       </div>
-      <form onSubmit={handleCreate} style={{ marginBottom: 8 }}>
-        <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="New KB name (e.g., kb-mytopic)"
-          style={{ padding: 4, fontSize: 12, width: 180 }}
-        />
-        <button type="submit" style={{ padding: '4px 8px', fontSize: 12, marginLeft: 4 }}>Create</button>
-      </form>
+
       {selected && (
         <div style={{ border: '1px solid #ddd', padding: 8, borderRadius: 4, background: '#f9fafb' }}>
           <strong>{selected}</strong>

@@ -86,6 +86,14 @@ async function main() {
     await bundleRaw(kb);
   }
 
+  // Write manifest for dynamic demo loading
+  const manifest = { kbs };
+  await fs.writeFile(
+    path.join(OUTPUT_DIR, 'manifest.json'),
+    JSON.stringify(manifest, null, 2)
+  );
+  console.log(`Wrote manifest with ${kbs.length} KBs`);
+
   console.log('Demo data bundling complete.');
 }
 

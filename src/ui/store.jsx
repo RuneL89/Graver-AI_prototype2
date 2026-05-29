@@ -11,12 +11,7 @@ const initialState = {
   pendingBlock: null,
   conversation: [],
   selectedConnection: null,
-  ingestion: {
-    status: 'idle',
-    fileName: null,
-    error: null,
-    kbName: null,
-  },
+
 };
 
 function reducer(state, action) {
@@ -63,44 +58,7 @@ function reducer(state, action) {
         activatedBases: action.payload.activatedBases || state.activatedBases,
         conversation: [...state.conversation, { role: 'system', text: 'New evidence added.' }],
       };
-    case 'INGEST_START':
-      return {
-        ...state,
-        ingestion: {
-          status: 'extracting',
-          fileName: action.payload.fileName,
-          error: null,
-          kbName: action.payload.kbName,
-        },
-      };
-    case 'INGEST_PROGRESS':
-      return {
-        ...state,
-        ingestion: {
-          ...state.ingestion,
-          status: action.payload.status,
-        },
-      };
-    case 'INGEST_COMPLETE':
-      return {
-        ...state,
-        ingestion: {
-          status: 'done',
-          fileName: null,
-          error: null,
-          kbName: null,
-        },
-      };
-    case 'INGEST_ERROR':
-      return {
-        ...state,
-        ingestion: {
-          status: 'error',
-          fileName: state.ingestion.fileName,
-          error: action.payload.error,
-          kbName: state.ingestion.kbName,
-        },
-      };
+
     default:
       return state;
   }

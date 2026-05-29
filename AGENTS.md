@@ -64,3 +64,64 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+# Wiki Ingestion Workflow (Agent-Driven)
+
+This project uses an agent-driven wiki creation workflow inspired by Andrej Karpathy's LLM Wiki pattern.
+
+## Folder Structure
+
+```
+global_raw/              -- inbox for new source documents
+ data/kb-<name>/
+   raw/                  -- source documents assigned to this KB
+   wiki/
+     entities/           -- person, company, contract pages
+     concepts/           -- domain abstractions
+     sources/            -- structured summaries of raw documents
+     synthesis/          -- combined analysis
+     index.md            -- table of contents
+     log.md              -- append-only record of operations
+   schema.md             -- KB-specific rules and page types
+```
+
+## Ingest Workflow
+
+When the user adds files to `global_raw/` and asks you to process them:
+
+1. List files in `global_raw/` and cross-reference with `data/kb-*/raw/` to find unprocessed files.
+2. For each unprocessed file, ask the user whether to add it to an existing KB or create a new one.
+   - If creating a new KB, ask for the KB name and what domain it covers.
+   - Draft a `schema.md` for the new KB and present it for approval.
+   - Create `data/kb-<name>/wiki/index.md` and `data/kb-<name>/wiki/log.md`.
+3. Copy the file from `global_raw/` to `data/kb-<name>/raw/`.
+4. Read the full source document.
+5. Discuss key takeaways with the user before writing any wiki pages.
+6. Create or update wiki pages following the page template:
+   - `## Summary` — 1-2 sentences
+   - `## Details` — main content with inline citations: `(source: filename)`
+   - `## Related pages` — forward links
+   - `## Connections` — backlinks
+   - `## Sources` — list of raw sources
+   - `## Contradictions` — only if applicable
+7. If the source touches multiple KBs, write the primary pages in the chosen KB and add cross-reference pages or links in the secondary KBs.
+8. Update `data/kb-<name>/wiki/index.md` with new pages and one-line descriptions.
+9. Append an entry to `data/kb-<name>/wiki/log.md`.
+10. Remind the user to run `npm run bundle-demo` to regenerate the demo data JSONs.
+
+## Page Format Rules
+
+- A single rich source may generate 10-20 pages (entities + concepts combined).
+- Create concept pages for EVERY major idea, domain term, or pattern mentioned.
+- Every factual claim must cite its source inline.
+- Use [[wiki-links]] liberally to connect related pages.
+- Keep page names lowercase with hyphens (e.g., `machine-learning.md`).
+- Write in clear, plain language.
+
+## Citation Rules
+
+- Every factual claim should reference its source file: `(source: filename.pdf)`
+- If two sources disagree, note the contradiction explicitly.
+- If a claim has no source, mark it as needing verification.

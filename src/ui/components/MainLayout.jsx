@@ -8,7 +8,7 @@ import NoteBlockComposer from './NoteBlockComposer.jsx';
 import ClarifyingQuestionTerminal from './ClarifyingQuestionTerminal.jsx';
 import WikiManager from './WikiManager.jsx';
 import WikiViewer from './WikiViewer.jsx';
-import DocumentUploader from './DocumentUploader.jsx';
+
 import { loadAllDemoData } from '../../lib/demoLoader.js';
 
 export default function MainLayout({ onOpenConfig }) {
@@ -49,7 +49,7 @@ export default function MainLayout({ onOpenConfig }) {
           <TipEntry />
           <ActiveKbPanel />
           {showManager && <WikiManager onOpenViewer={setViewerKbName} />}
-          {showManager && <DocumentUploader />}
+
           <div style={{ flex: 1, minHeight: 0 }} />
           <ClarifyingQuestionTerminal />
         </div>

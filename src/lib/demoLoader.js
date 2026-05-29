@@ -51,8 +51,18 @@ export async function loadDemoData(kbName) {
 }
 
 export async function loadAllDemoData() {
-  const kbs = ['kb-business-registry', 'kb-sanctions', 'kb-procurement'];
-  for (const kb of kbs) {
-    await loadDemoData(kb);
+  try {
+    const res = await fetch('./demo-data/manifest.json');
+    if (!res.ok) throw new Error('No manifest found');
+    const manifest = await res.json();
+    for (const kb of manifest.kbs || []) {
+      await loadDemoData(kb);
+    }
+  } catch (err) {
+    console.warn('[demoLoader] Failed to load manifest, falling back to hardcoded list:', err.message);
+    const kbs = ['kb-business-registry', 'kb-sanctions', 'kb-procurement'];
+    for (const kb of kbs) {
+      await loadDemoData(kb);
+    }
   }
 }
