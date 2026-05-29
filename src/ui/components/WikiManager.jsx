@@ -3,7 +3,7 @@ import { useStore } from '../store.jsx';
 import { listKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, readWikiIndex, getSchema, setSchema, appendWikiLog } from '../../lib/wikiStore.js';
 import { lintWiki } from '../../lib/lint.js';
 
-export default function WikiManager() {
+export default function WikiManager({ onOpenViewer }) {
   const { state, dispatch } = useStore();
   const kbs = state.knowledgeBases;
   const [newName, setNewName] = useState('');
@@ -65,6 +65,7 @@ export default function WikiManager() {
         {kbs.map((kb) => (
           <div key={kb} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <button onClick={() => selectKb(kb)} style={{ fontSize: 12, padding: '2px 8px' }}>{kb}</button>
+            <button onClick={() => onOpenViewer(kb)} style={{ fontSize: 12, padding: '2px 8px' }}>View</button>
             <button onClick={() => handleDelete(kb)} style={{ fontSize: 12, padding: '2px 8px', color: '#ef4444' }}>Delete</button>
           </div>
         ))}

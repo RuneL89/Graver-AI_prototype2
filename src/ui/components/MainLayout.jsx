@@ -7,6 +7,7 @@ import VerificationDashboard from './VerificationDashboard.jsx';
 import NoteBlockComposer from './NoteBlockComposer.jsx';
 import ClarifyingQuestionTerminal from './ClarifyingQuestionTerminal.jsx';
 import WikiManager from './WikiManager.jsx';
+import WikiViewer from './WikiViewer.jsx';
 import DocumentUploader from './DocumentUploader.jsx';
 import { loadAllDemoData } from '../../lib/demoLoader.js';
 
@@ -14,6 +15,7 @@ export default function MainLayout({ onOpenConfig }) {
   const { state } = useStore();
   const [demoLoading, setDemoLoading] = useState(false);
   const [showManager, setShowManager] = useState(false);
+  const [viewerKbName, setViewerKbName] = useState(null);
 
   async function handleLoadDemo() {
     setDemoLoading(true);
@@ -46,11 +48,14 @@ export default function MainLayout({ onOpenConfig }) {
         <div style={{ width: 320, borderRight: '1px solid #ccc', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
           <TipEntry />
           <ActiveKbPanel />
-          {showManager && <WikiManager />}
+          {showManager && <WikiManager onOpenViewer={setViewerKbName} />}
           {showManager && <DocumentUploader />}
           <div style={{ flex: 1, minHeight: 0 }} />
           <ClarifyingQuestionTerminal />
         </div>
+        {viewerKbName && (
+          <WikiViewer kbName={viewerKbName} onClose={() => setViewerKbName(null)} />
+        )}
         {/* Center pane */}
         <div style={{ flex: 1, borderRight: '1px solid #ccc', display: 'flex', flexDirection: 'column' }}>
           <ConnectionGraph />
